@@ -1,0 +1,371 @@
+:root {
+  color-scheme: dark;
+  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  --bg: #0f1110;
+  --bg-elevated: #171b19;
+  --bg-panel: rgba(26, 31, 29, 0.92);
+  --line: rgba(223, 235, 229, 0.1);
+  --text: #eef5f1;
+  --muted: #93a49d;
+  --accent: #d0ff71;
+  --accent-strong: #c2ff47;
+  --danger: #ff6f61;
+  --good: #8cf5a6;
+  --shadow: 0 24px 64px rgba(0, 0, 0, 0.35);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(208, 255, 113, 0.08), transparent 30%),
+    radial-gradient(circle at bottom right, rgba(65, 163, 255, 0.12), transparent 25%),
+    var(--bg);
+  color: var(--text);
+}
+
+button {
+  font: inherit;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.app-shell {
+  display: grid;
+  grid-template-columns: 360px minmax(0, 1fr);
+  gap: 24px;
+  min-height: 100vh;
+  padding: 24px;
+}
+
+.sidebar,
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.sidebar {
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  background: linear-gradient(180deg, rgba(27, 32, 30, 0.98), rgba(19, 22, 21, 0.95));
+  box-shadow: var(--shadow);
+}
+
+.content {
+  min-width: 0;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.78rem;
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+h1 {
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1;
+  margin-bottom: 14px;
+}
+
+h2 {
+  font-size: 1.15rem;
+}
+
+.lede,
+.muted {
+  color: var(--muted);
+}
+
+.panel {
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: var(--bg-panel);
+  padding: 20px;
+  backdrop-filter: blur(18px);
+  box-shadow: var(--shadow);
+}
+
+.panel-header,
+.hero,
+.replay-toolbar,
+.trade-card-top,
+.review-row,
+.bar-readout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.panel-header span,
+.bar-readout span,
+.review-row span {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.meta-grid,
+.stat-grid,
+.lower-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.meta-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 18px 0 0;
+}
+
+.meta-grid dt {
+  color: var(--muted);
+  font-size: 0.82rem;
+  margin-bottom: 6px;
+}
+
+.meta-grid dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.stat-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 18px;
+}
+
+.stat-card {
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.stat-card span {
+  display: block;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.stat-card strong {
+  font-size: 1.1rem;
+}
+
+.stat-card-good {
+  background: rgba(140, 245, 166, 0.08);
+  border-color: rgba(140, 245, 166, 0.16);
+}
+
+.hero-actions,
+.speed-group {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.button,
+.chip,
+.trade-card {
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text);
+  transition: 160ms ease;
+}
+
+.button,
+.chip {
+  border-radius: 999px;
+  padding: 10px 16px;
+  cursor: pointer;
+}
+
+.button:hover,
+.chip:hover,
+.trade-card:hover {
+  border-color: rgba(208, 255, 113, 0.4);
+  transform: translateY(-1px);
+}
+
+.button-strong,
+.chip-active {
+  background: var(--accent);
+  color: #10120f;
+  border-color: transparent;
+}
+
+.chart-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.chart {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(20, minmax(14px, 1fr));
+  align-items: end;
+  gap: 8px;
+  min-height: 340px;
+  padding: 18px;
+  border-radius: 22px;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px) 0 0 / 100% 25%,
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px) 0 0 / 10% 100%,
+    #101412;
+  overflow: hidden;
+}
+
+.candle-slot {
+  position: relative;
+  height: 100%;
+}
+
+.wick,
+.candle {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 999px;
+}
+
+.wick {
+  width: 2px;
+  background: rgba(238, 245, 241, 0.7);
+}
+
+.candle {
+  width: 12px;
+  min-height: 8px;
+}
+
+.candle-up {
+  background: linear-gradient(180deg, #d7ff80, #8cf5a6);
+}
+
+.candle-down {
+  background: linear-gradient(180deg, #ff8c7e, #ff5f6d);
+}
+
+.lower-grid {
+  grid-template-columns: 1.2fr 1fr;
+}
+
+.trade-list,
+.review-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.trade-card {
+  width: 100%;
+  text-align: left;
+  padding: 16px;
+  border-radius: 18px;
+  cursor: pointer;
+}
+
+.trade-card p + p {
+  margin-top: 8px;
+}
+
+.trade-card-active {
+  border-color: rgba(208, 255, 113, 0.55);
+  background: rgba(208, 255, 113, 0.08);
+}
+
+.pill {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.pill-good {
+  background: rgba(140, 245, 166, 0.12);
+  color: var(--good);
+}
+
+.pill-bad {
+  background: rgba(255, 111, 97, 0.12);
+  color: var(--danger);
+}
+
+.review-row {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.review-row strong {
+  text-align: right;
+  max-width: 70%;
+}
+
+.review-row-multiline {
+  align-items: flex-start;
+}
+
+.review-row-multiline strong {
+  white-space: pre-wrap;
+}
+
+@media (max-width: 1080px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .lower-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .app-shell {
+    padding: 14px;
+  }
+
+  .sidebar {
+    padding: 22px;
+  }
+
+  .panel-header,
+  .hero,
+  .replay-toolbar,
+  .review-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .chart {
+    gap: 5px;
+    min-height: 260px;
+    grid-template-columns: repeat(20, minmax(8px, 1fr));
+  }
+
+  .candle {
+    width: 8px;
+  }
+
+  .review-row strong {
+    max-width: 100%;
+    text-align: left;
+  }
+}
