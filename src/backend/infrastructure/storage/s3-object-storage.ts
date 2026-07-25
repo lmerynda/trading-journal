@@ -11,21 +11,33 @@ import type {
   StoredObject,
 } from "../../ports/object-storage";
 
-function requiredEnvironment(name: string): string {
-  const value = process.env[name];
-  if (!value) throw new Error(`${name} is required for object storage.`);
+function environment(...names: string[]): string | undefined {
+  return names.map((name) => process.env[name]).find(Boolean);
+}
+
+function requiredEnvironment(...names: string[]): string {
+  const value = environment(...names);
+  if (!value) {
+    throw new Error(`${names.join(" or ")} is required for object storage.`);
+  }
   return value;
 }
 
 export class S3ObjectStorage implements ObjectStoragePort {
-  private readonly bucket = requiredEnvironment("S3_BUCKET");
+  private readonly bucket = requiredEnvironment(
+    "AWS_S3_BUCKET_NAME",
+    "S3_BUCKET",
+  );
   private readonly client = new S3Client({
-    region: process.env.S3_REGION ?? "us-east-1",
-    endpoint: process.env.S3_ENDPOINT,
+    region: environment("AWS_DEFAULT_REGION", "S3_REGION") ?? "us-east-1",
+    endpoint: environment("AWS_ENDPOINT_URL", "S3_ENDPOINT"),
     forcePathStyle: process.env.S3_FORCE_PATH_STYLE === "true",
     credentials: {
-      accessKeyId: requiredEnvironment("S3_ACCESS_KEY_ID"),
-      secretAccessKey: requiredEnvironment("S3_SECRET_ACCESS_KEY"),
+      accessKeyId: requiredEnvironment("AWS_ACCESS_KEY_ID", "S3_ACCESS_KEY_ID"),
+      secretAccessKey: requiredEnvironment(
+        "AWS_SECRET_ACCESS_KEY",
+        "S3_SECRET_ACCESS_KEY",
+      ),
     },
   });
 
