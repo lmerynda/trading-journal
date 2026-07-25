@@ -1,108 +1,90 @@
 export type TradeDirection = "long" | "short";
 
 export interface TradeImage {
-    id: string;
-    name: string;
-    type: string;
-    blob: Blob;
+  id: string;
+  name: string;
+  type: string;
+  size: number;
 }
 
 export interface TradeReview {
-    id: string;
-    title: string;
-    date: string;
-    direction: TradeDirection;
-    notes: string;
-    tags: string[];
-    images: TradeImage[];
-    createdAt: string;
-    updatedAt: string;
+  id: string;
+  title: string;
+  date: string;
+  direction: TradeDirection;
+  notes: string;
+  tags: string[];
+  images: TradeImage[];
+  createdAt: string;
+  updatedAt: string;
 }
 
-const databaseName = "trade-review-library";
-const storeName = "trades";
-
-function openDatabase(): Promise<IDBDatabase> {
-    return new Promise((resolve, reject) => {
-        const request = indexedDB.open(databaseName, 1);
-
-        request.onupgradeneeded = () => {
-            const database = request.result;
-            if (!database.objectStoreNames.contains(storeName)) {
-                database.createObjectStore(storeName, { keyPath: "id" });
-            }
-        };
-
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-    });
+async function request<T>(input: RequestInfo, init?: RequestInit): Promise<T> {
+  const response = await fetch(input, init);
+  if (!response.ok) {
+    throw new Error(`Request failed with status ${response.status}.`);
+  }
+  return (await response.json()) as T;
 }
 
-export async function listTrades(): Promise<TradeReview[]> {
-    const database = await openDatabase();
-
-    return new Promise((resolve, reject) => {
-        const transaction = database.transaction(storeName, "readonly");
-        const request = transaction.objectStore(storeName).getAll();
-
-        request.onsuccess = () => {
-            const trades = request.result as TradeReview[];
-            resolve(
-                trades.sort((left, right) =>
-                    right.date === left.date
-                        ? right.createdAt.localeCompare(left.createdAt)
-                        : right.date.localeCompare(left.date),
-                ),
-            );
-        };
-        request.onerror = () => reject(request.error);
-        transaction.oncomplete = () => database.close();
-    });
+export function listTrades(): Promise<TradeReview[]> {
+  return request<TradeReview[]>("/api/trades", { cache: "no-store" });
 }
 
-export async function saveTrade(trade: TradeReview): Promise<void> {
-    const database = await openDatabase();
+export function createTrade(): Promise<TradeReview> {
+  const now = new Date();
+  const date = new Date(now.getTime() - now.getTimezoneOffset() * 60_000)
+    .toISOString()
+    .slice(0, 10);
 
-    return new Promise((resolve, reject) => {
-        const transaction = database.transaction(storeName, "readwrite");
-        transaction.objectStore(storeName).put(trade);
-        transaction.oncomplete = () => {
-            database.close();
-            resolve();
-        };
-        transaction.onerror = () => reject(transaction.error);
-    });
+  return request<TradeReview>("/api/trades", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ title: "Untitled trade", date, direction: "long" }),
+  });
+}
+
+export function saveTrade(trade: TradeReview): Promise<TradeReview> {
+  return request<TradeReview>(`/api/trades/${trade.id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      title: trade.title,
+      date: trade.date,
+      direction: trade.direction,
+      notes: trade.notes,
+      tags: trade.tags,
+    }),
+  });
 }
 
 export async function removeTrade(id: string): Promise<void> {
-    const database = await openDatabase();
-
-    return new Promise((resolve, reject) => {
-        const transaction = database.transaction(storeName, "readwrite");
-        transaction.objectStore(storeName).delete(id);
-        transaction.oncomplete = () => {
-            database.close();
-            resolve();
-        };
-        transaction.onerror = () => reject(transaction.error);
-    });
+  const response = await fetch(`/api/trades/${id}`, { method: "DELETE" });
+  if (!response.ok) {
+    throw new Error(`Request failed with status ${response.status}.`);
+  }
 }
 
-export function createTrade(): TradeReview {
-    const now = new Date();
-    const localDate = new Date(now.getTime() - now.getTimezoneOffset() * 60_000)
-        .toISOString()
-        .slice(0, 10);
+export async function uploadTradeImage(
+  tradeId: string,
+  image: File,
+): Promise<TradeImage> {
+  const form = new FormData();
+  form.set("image", image);
+  return request<TradeImage>(`/api/trades/${tradeId}/images`, {
+    method: "POST",
+    body: form,
+  });
+}
 
-    return {
-        id: crypto.randomUUID(),
-        title: "Untitled trade",
-        date: localDate,
-        direction: "long",
-        notes: "",
-        tags: [],
-        images: [],
-        createdAt: now.toISOString(),
-        updatedAt: now.toISOString(),
-    };
+export async function removeTradeImage(
+  tradeId: string,
+  imageId: string,
+): Promise<void> {
+  const response = await fetch(`/api/trades/${tradeId}/images/${imageId}`, {
+    method: "DELETE",
+  });
+  if (!response.ok) {
+    throw new Error(`Request failed with status ${response.status}.`);
+  }
 }

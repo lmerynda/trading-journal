@@ -13,7 +13,9 @@ import {
   createTrade,
   listTrades,
   removeTrade,
+  removeTradeImage,
   saveTrade,
+  uploadTradeImage,
   type TradeImage,
   type TradeReview,
 } from "../lib/trade-library";
@@ -31,11 +33,9 @@ function Screenshot({
   onRemove,
 }: {
   image: TradeImage;
-  onRemove: () => void;
+  onRemove: () => Promise<void>;
 }) {
-  const [source] = useState(() => URL.createObjectURL(image.blob));
-
-  useEffect(() => () => URL.revokeObjectURL(source), [source]);
+  const source = `/api/images/${image.id}`;
 
   return (
     <figure className="screenshot">
@@ -48,7 +48,7 @@ function Screenshot({
         type="button"
         title={`Remove ${image.name}`}
         aria-label={`Remove ${image.name}`}
-        onClick={onRemove}
+        onClick={() => void onRemove()}
       >
         ×
       </button>
@@ -66,7 +66,10 @@ export function JournalApp() {
   const [tagDraft, setTagDraft] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const fileInput = useRef<HTMLInputElement>(null);
+  const saveTimers = useRef<Record<string, number>>({});
   const selectedTrade = trades.find((trade) => trade.id === selectedId);
 
   useEffect(() => {
@@ -75,6 +78,7 @@ export function JournalApp() {
         setTrades(storedTrades);
         setSelectedId(storedTrades[0]?.id ?? "");
       })
+      .catch(() => setErrorMessage("Could not load the review library."))
       .finally(() => setIsLoading(false));
   }, []);
 
@@ -92,23 +96,38 @@ export function JournalApp() {
     setTrades((current) =>
       current.map((trade) => (trade.id === next.id ? next : trade)),
     );
-    void saveTrade(next);
+    window.clearTimeout(saveTimers.current[next.id]);
+    saveTimers.current[next.id] = window.setTimeout(() => {
+      void saveTrade(next).catch(() =>
+        setErrorMessage("Changes could not be saved."),
+      );
+    }, 450);
   }
 
   async function handleCreate(): Promise<void> {
-    const trade = createTrade();
-    await saveTrade(trade);
-    setTrades((current) => [trade, ...current]);
-    setSelectedId(trade.id);
+    try {
+      const trade = await createTrade();
+      setTrades((current) => [trade, ...current]);
+      setSelectedId(trade.id);
+      setErrorMessage("");
+    } catch {
+      setErrorMessage("The trade could not be created.");
+    }
   }
 
   async function handleDelete(): Promise<void> {
     if (!selectedTrade || !window.confirm("Delete this trade review?")) return;
 
-    await removeTrade(selectedTrade.id);
-    const remaining = trades.filter((trade) => trade.id !== selectedTrade.id);
-    setTrades(remaining);
-    setSelectedId(remaining[0]?.id ?? "");
+    try {
+      window.clearTimeout(saveTimers.current[selectedTrade.id]);
+      await removeTrade(selectedTrade.id);
+      const remaining = trades.filter((trade) => trade.id !== selectedTrade.id);
+      setTrades(remaining);
+      setSelectedId(remaining[0]?.id ?? "");
+      setErrorMessage("");
+    } catch {
+      setErrorMessage("The trade could not be deleted.");
+    }
   }
 
   function addTag(): void {
@@ -128,32 +147,42 @@ export function JournalApp() {
     }
   }
 
-  function addImages(files: FileList | File[]): void {
-    const images: TradeImage[] = Array.from(files)
-      .filter((file) => file.type.startsWith("image/"))
-      .map((file) => ({
-        id: crypto.randomUUID(),
-        name: file.name || "Pasted screenshot",
-        type: file.type,
-        blob: file,
-      }));
+  async function addImages(files: FileList | File[]): Promise<void> {
+    if (!selectedTrade) return;
+    const images = Array.from(files).filter((file) =>
+      file.type.startsWith("image/"),
+    );
     if (images.length === 0) return;
 
-    updateTrade((trade) => ({
-      ...trade,
-      images: [...trade.images, ...images],
-    }));
+    setIsUploading(true);
+    setErrorMessage("");
+    try {
+      for (const image of images) {
+        const created = await uploadTradeImage(selectedTrade.id, image);
+        setTrades((current) =>
+          current.map((trade) =>
+            trade.id === selectedTrade.id
+              ? { ...trade, images: [...trade.images, created] }
+              : trade,
+          ),
+        );
+      }
+    } catch {
+      setErrorMessage("One or more screenshots could not be uploaded.");
+    } finally {
+      setIsUploading(false);
+    }
   }
 
   function handleFiles(event: ChangeEvent<HTMLInputElement>): void {
-    if (event.target.files) addImages(event.target.files);
+    if (event.target.files) void addImages(event.target.files);
     event.target.value = "";
   }
 
   function handleDrop(event: DragEvent<HTMLDivElement>): void {
     event.preventDefault();
     setIsDragging(false);
-    addImages(event.dataTransfer.files);
+    void addImages(event.dataTransfer.files);
   }
 
   useEffect(() => {
@@ -161,7 +190,7 @@ export function JournalApp() {
       const images = Array.from(event.clipboardData?.files ?? []).filter(
         (file) => file.type.startsWith("image/"),
       );
-      if (images.length > 0) addImages(images);
+      if (images.length > 0) void addImages(images);
     }
 
     window.addEventListener("paste", handlePaste);
@@ -170,6 +199,16 @@ export function JournalApp() {
 
   return (
     <main className="library-shell">
+      {errorMessage && (
+        <button
+          className="error-banner"
+          type="button"
+          title="Dismiss"
+          onClick={() => setErrorMessage("")}
+        >
+          {errorMessage} <span aria-hidden="true">×</span>
+        </button>
+      )}
       <aside className="library-sidebar">
         <header className="sidebar-header">
           <div>
@@ -329,9 +368,11 @@ export function JournalApp() {
                 <button
                   className="upload-button"
                   type="button"
+                  disabled={isUploading}
                   onClick={() => fileInput.current?.click()}
                 >
-                  <span aria-hidden="true">+</span> Add images
+                  <span aria-hidden="true">+</span>{" "}
+                  {isUploading ? "Uploading..." : "Add images"}
                 </button>
                 <input
                   ref={fileInput}
@@ -349,14 +390,27 @@ export function JournalApp() {
                     <Screenshot
                       image={image}
                       key={image.id}
-                      onRemove={() =>
-                        updateTrade((trade) => ({
-                          ...trade,
-                          images: trade.images.filter(
-                            (candidate) => candidate.id !== image.id,
-                          ),
-                        }))
-                      }
+                      onRemove={async () => {
+                        try {
+                          await removeTradeImage(selectedTrade.id, image.id);
+                          setTrades((current) =>
+                            current.map((trade) =>
+                              trade.id === selectedTrade.id
+                                ? {
+                                    ...trade,
+                                    images: trade.images.filter(
+                                      (candidate) => candidate.id !== image.id,
+                                    ),
+                                  }
+                                : trade,
+                            ),
+                          );
+                        } catch {
+                          setErrorMessage(
+                            "The screenshot could not be removed.",
+                          );
+                        }
+                      }}
                     />
                   ))}
                 </div>

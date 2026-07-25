@@ -8,6 +8,13 @@
       "when": 1784620800000,
       "tag": "0000_repository_foundation",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1785002359578,
+      "tag": "0001_brave_inhumans",
+      "breakpoints": true
     }
   ]
 }
