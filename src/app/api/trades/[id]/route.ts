@@ -1,48 +1,48 @@
 import {
-  getObjectStorage,
-  getTradeCatalog,
+    getObjectStorage,
+    getTradeCatalog,
 } from "@/backend/composition/trades";
 import { tradeId, updateTradeInput } from "../validation";
 
 interface RouteContext {
-  params: Promise<{ id: string }>;
+    params: Promise<{ id: string }>;
 }
 
 export async function GET(
-  _request: Request,
-  context: RouteContext,
+    _request: Request,
+    context: RouteContext,
 ): Promise<Response> {
-  const id = tradeId.safeParse((await context.params).id);
-  if (!id.success) return new Response(null, { status: 404 });
+    const id = tradeId.safeParse((await context.params).id);
+    if (!id.success) return new Response(null, { status: 404 });
 
-  const trade = await getTradeCatalog().get(id.data);
-  return trade
-    ? Response.json(trade, { headers: { "Cache-Control": "no-store" } })
-    : new Response(null, { status: 404 });
+    const trade = await getTradeCatalog().get(id.data);
+    return trade
+        ? Response.json(trade, { headers: { "Cache-Control": "no-store" } })
+        : new Response(null, { status: 404 });
 }
 
 export async function PATCH(
-  request: Request,
-  context: RouteContext,
+    request: Request,
+    context: RouteContext,
 ): Promise<Response> {
-  const id = tradeId.safeParse((await context.params).id);
-  const input = updateTradeInput.safeParse(await request.json());
-  if (!id.success || !input.success) {
-    return Response.json({ error: "Invalid trade." }, { status: 400 });
-  }
+    const id = tradeId.safeParse((await context.params).id);
+    const input = updateTradeInput.safeParse(await request.json());
+    if (!id.success || !input.success) {
+        return Response.json({ error: "Invalid trade." }, { status: 400 });
+    }
 
-  const trade = await getTradeCatalog().update(id.data, input.data);
-  return trade ? Response.json(trade) : new Response(null, { status: 404 });
+    const trade = await getTradeCatalog().update(id.data, input.data);
+    return trade ? Response.json(trade) : new Response(null, { status: 404 });
 }
 
 export async function DELETE(
-  _request: Request,
-  context: RouteContext,
+    _request: Request,
+    context: RouteContext,
 ): Promise<Response> {
-  const id = tradeId.safeParse((await context.params).id);
-  if (!id.success) return new Response(null, { status: 404 });
+    const id = tradeId.safeParse((await context.params).id);
+    if (!id.success) return new Response(null, { status: 404 });
 
-  const keys = await getTradeCatalog().delete(id.data);
-  await Promise.all(keys.map((key) => getObjectStorage().delete(key)));
-  return new Response(null, { status: 204 });
+    const keys = await getTradeCatalog().delete(id.data);
+    await Promise.all(keys.map((key) => getObjectStorage().delete(key)));
+    return new Response(null, { status: 204 });
 }
