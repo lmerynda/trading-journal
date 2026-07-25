@@ -1,5 +1,6 @@
 import "server-only";
 
+import { QueryPublicLibrary } from "../application/trades/query-public-library";
 import { PostgresTradeCatalog } from "../infrastructure/database/postgres-trade-catalog";
 import { S3ObjectStorage } from "../infrastructure/storage/s3-object-storage";
 import type { ObjectStoragePort } from "../ports/object-storage";
@@ -16,4 +17,8 @@ export function getTradeCatalog(): TradeCatalogPort {
 export function getObjectStorage(): ObjectStoragePort {
   storage ??= new S3ObjectStorage();
   return storage;
+}
+
+export function createPublicLibraryQuery(): QueryPublicLibrary {
+  return new QueryPublicLibrary(getTradeCatalog());
 }

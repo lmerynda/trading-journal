@@ -2,6 +2,7 @@ import {
   getObjectStorage,
   getTradeCatalog,
 } from "@/backend/composition/trades";
+import { requireAdminMutation } from "@/lib/admin-session";
 import { tradeId } from "../../../validation";
 
 interface RouteContext {
@@ -9,9 +10,12 @@ interface RouteContext {
 }
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   context: RouteContext,
 ): Promise<Response> {
+  const unauthorized = requireAdminMutation(request);
+  if (unauthorized) return unauthorized;
+
   const params = await context.params;
   const id = tradeId.safeParse(params.id);
   const imageId = tradeId.safeParse(params.imageId);

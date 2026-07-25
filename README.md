@@ -29,6 +29,23 @@ The complete local verification commands are:
 
 `npm test` exercises the framework-independent backend directly. It does not start Next.js, render React, or launch a browser. `npm run check:boundaries` enforces the dependency direction described in [ADR 0002](./docs/decisions/0002-single-nextjs-application.md).
 
+## Owner access
+
+Reading the trade library is public. Creating, editing, uploading, and deleting
+require a private owner session. Configure `ADMIN_ENTRY_KEY`, `ADMIN_PASSWORD`,
+and `ADMIN_SESSION_SECRET` in `.env` and as Railway secrets. Generate the two
+random values with:
+
+```sh
+openssl rand -hex 24      # ADMIN_ENTRY_KEY
+openssl rand -base64 48   # ADMIN_SESSION_SECRET
+```
+
+Open `/author/<ADMIN_ENTRY_KEY>` manually to sign in with `ADMIN_PASSWORD`. The
+route is intentionally not linked from the public application, but the password
+and signed HTTP-only session are the security boundary. Changing
+`ADMIN_SESSION_SECRET` invalidates every existing session.
+
 ## Product concept
 
 The platform is a quiet, searchable library of trading days. It brings together reviews created across trading platforms without trying to replace their charting and annotation tools.

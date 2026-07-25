@@ -52,8 +52,16 @@ export interface StoredTradeImage extends TradeImageRecord {
   objectKey: string;
 }
 
+export interface TradeSearchFilter {
+  tags?: string[];
+  date?: string;
+  from?: string;
+  to?: string;
+  text?: string;
+}
+
 export interface TradeCatalogPort {
-  list(): Promise<TradeReviewRecord[]>;
+  list(filter?: TradeSearchFilter): Promise<TradeReviewRecord[]>;
   get(id: string): Promise<TradeReviewRecord | undefined>;
   create(input: CreateTradeInput): Promise<TradeReviewRecord>;
   update(

@@ -2,6 +2,7 @@ import {
   getObjectStorage,
   getTradeCatalog,
 } from "@/backend/composition/trades";
+import { requireAdminMutation } from "@/lib/admin-session";
 import { tradeId, updateTradeInput } from "../validation";
 
 interface RouteContext {
@@ -25,6 +26,9 @@ export async function PATCH(
   request: Request,
   context: RouteContext,
 ): Promise<Response> {
+  const unauthorized = requireAdminMutation(request);
+  if (unauthorized) return unauthorized;
+
   const id = tradeId.safeParse((await context.params).id);
   const input = updateTradeInput.safeParse(await request.json());
   if (!id.success || !input.success) {
@@ -36,9 +40,12 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   context: RouteContext,
 ): Promise<Response> {
+  const unauthorized = requireAdminMutation(request);
+  if (unauthorized) return unauthorized;
+
   const id = tradeId.safeParse((await context.params).id);
   if (!id.success) return new Response(null, { status: 404 });
 

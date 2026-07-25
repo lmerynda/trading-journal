@@ -7,6 +7,7 @@ import type {
   TradeCatalogPort,
   TradeImageRecord,
   TradeReviewRecord,
+  TradeSearchFilter,
   UpdateTradeInput,
 } from "../../ports/trade-catalog";
 import { getPostgresClient } from "./client";
@@ -64,9 +65,47 @@ const tradeSelection = `
 `;
 
 export class PostgresTradeCatalog implements TradeCatalogPort {
-  async list(): Promise<TradeReviewRecord[]> {
+  async list(filter: TradeSearchFilter = {}): Promise<TradeReviewRecord[]> {
+    const conditions: string[] = [];
+    const values: string[] = [];
+    const parameter = (value: string): string => {
+      values.push(value);
+      return `$${values.length}`;
+    };
+
+    if (filter.date) {
+      conditions.push(`trade.trade_date = ${parameter(filter.date)}`);
+    } else {
+      if (filter.from) {
+        conditions.push(`trade.trade_date >= ${parameter(filter.from)}`);
+      }
+      if (filter.to) {
+        conditions.push(`trade.trade_date <= ${parameter(filter.to)}`);
+      }
+    }
+
+    if (filter.text) {
+      const search = parameter(`%${filter.text}%`);
+      conditions.push(
+        `(trade.title ilike ${search} or trade.notes ilike ${search})`,
+      );
+    }
+
+    for (const tag of filter.tags ?? []) {
+      conditions.push(`exists (
+        select 1
+        from trade_tags filtered_trade_tag
+        join tags filtered_tag on filtered_tag.id = filtered_trade_tag.tag_id
+        where filtered_trade_tag.trade_id = trade.id
+          and filtered_tag.name = ${parameter(tag)}
+      )`);
+    }
+
+    const where =
+      conditions.length > 0 ? `where ${conditions.join(" and ")}` : "";
     const rows = await getPostgresClient().unsafe<TradeRow[]>(
-      `${tradeSelection} order by trade.trade_date desc, trade.created_at desc`,
+      `${tradeSelection} ${where} order by trade.trade_date desc, trade.created_at desc`,
+      values,
     );
     return rows.map(mapTrade);
   }
