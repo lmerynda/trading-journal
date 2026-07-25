@@ -14,6 +14,7 @@ import type {
   PublicLibraryDto,
 } from "@/backend/application/trades/query-public-library";
 import type { TradeReviewRecord } from "@/backend/ports/trade-catalog";
+import { groupTradesByDate } from "@/lib/group-trades-by-date";
 import {
   clearTradeSearchDates,
   parseTradeSearchQuery,
@@ -65,6 +66,7 @@ export function PublicLibrary({
   const router = useRouter();
   const [queryDraft, setQueryDraft] = useState(query);
   const parsed = parseTradeSearchQuery(query);
+  const tradeGroups = groupTradesByDate(library.trades);
 
   useEffect(() => {
     if (queryDraft === query) return;
@@ -126,27 +128,38 @@ export function PublicLibrary({
         </div>
 
         <nav className="public-trade-list" aria-label="Trade reviews">
-          {library.trades.map((trade) => (
-            <Link
-              className={`public-trade-item ${selectedTrade?.id === trade.id ? "is-selected" : ""}`}
-              href={hrefFor(`/trades/${trade.id}`, query)}
-              key={trade.id}
-            >
-              <span className="trade-list-topline">
-                <time dateTime={trade.date}>{formatDate(trade.date)}</time>
-                <span className={`direction direction-${trade.direction}`}>
-                  {trade.direction}
-                </span>
-              </span>
-              <strong>{trade.title || "Untitled trade"}</strong>
-              {trade.tags.length > 0 && (
-                <span className="list-tags">
-                  {trade.tags.slice(0, 3).map((tag) => (
-                    <span key={tag}>#{tag}</span>
-                  ))}
-                </span>
-              )}
-            </Link>
+          {tradeGroups.map((group) => (
+            <section className="public-trade-day" key={group.date}>
+              <h2 className="public-trade-day-heading">
+                <time dateTime={group.date}>{formatDate(group.date)}</time>
+                <span>{group.trades.length}</span>
+              </h2>
+              <div className="public-trade-day-items">
+                {group.trades.map((trade) => (
+                  <Link
+                    className={`public-trade-item ${selectedTrade?.id === trade.id ? "is-selected" : ""}`}
+                    href={hrefFor(`/trades/${trade.id}`, query)}
+                    key={trade.id}
+                  >
+                    <span className="public-trade-item-heading">
+                      <strong>{trade.title || "Untitled trade"}</strong>
+                      <span
+                        className={`direction direction-${trade.direction}`}
+                      >
+                        {trade.direction}
+                      </span>
+                    </span>
+                    {trade.tags.length > 0 && (
+                      <span className="list-tags">
+                        {trade.tags.slice(0, 3).map((tag) => (
+                          <span key={tag}>#{tag}</span>
+                        ))}
+                      </span>
+                    )}
+                  </Link>
+                ))}
+              </div>
+            </section>
           ))}
           {library.trades.length === 0 && (
             <div className="public-no-results">
