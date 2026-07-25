@@ -9,11 +9,11 @@ let catalog: TradeCatalogPort | undefined;
 let storage: ObjectStoragePort | undefined;
 
 export function getTradeCatalog(): TradeCatalogPort {
-    catalog ??= new PostgresTradeCatalog();
-    return catalog;
+  catalog ??= new PostgresTradeCatalog();
+  return catalog;
 }
 
 export function getObjectStorage(): ObjectStoragePort {
-    storage ??= new S3ObjectStorage();
-    return storage;
+  storage ??= new S3ObjectStorage();
+  return storage;
 }

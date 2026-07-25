@@ -2,7 +2,7 @@ import {
     getObjectStorage,
     getTradeCatalog,
 } from "@/backend/composition/trades";
-import { tradeId } from "../../validation";
+import { imageRole, tradeId } from "../../validation";
 
 const maximumImageSize = 20 * 1024 * 1024;
 
@@ -21,11 +21,13 @@ export async function POST(
 
     const form = await request.formData();
     const image = form.get("image");
+    const role = imageRole.safeParse(form.get("role"));
     if (
         !(image instanceof File) ||
         !image.type.startsWith("image/") ||
         image.size === 0 ||
-        image.size > maximumImageSize
+        image.size > maximumImageSize ||
+        !role.success
     ) {
         return Response.json(
             { error: "Upload an image no larger than 20 MB." },
@@ -50,6 +52,7 @@ export async function POST(
             name: image.name || "Screenshot",
             type: image.type,
             size: image.size,
+            role: role.data,
         });
         return Response.json(created, { status: 201 });
     } catch (error) {

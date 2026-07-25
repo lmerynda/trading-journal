@@ -17,6 +17,7 @@ interface TradeRow {
     date: Date;
     direction: "long" | "short";
     notes: string;
+    youtubeUrl: string | null;
     tags: string[];
     images: TradeImageRecord[];
     createdAt: Date;
@@ -39,6 +40,7 @@ const tradeSelection = `
     trade.trade_date as "date",
     trade.direction,
     trade.notes,
+    trade.youtube_url as "youtubeUrl",
     trade.created_at as "createdAt",
     trade.updated_at as "updatedAt",
     coalesce((
@@ -52,7 +54,8 @@ const tradeSelection = `
         'id', image.id,
         'name', image.filename,
         'type', image.mime_type,
-        'size', image.byte_size
+        'size', image.byte_size,
+        'role', image.role
       ) order by image.position, image.created_at)
       from trade_images image
       where image.trade_id = trade.id
@@ -104,6 +107,7 @@ export class PostgresTradeCatalog implements TradeCatalogPort {
             trade_date = ${input.date},
             direction = ${input.direction},
             notes = ${input.notes},
+            youtube_url = ${input.youtubeUrl},
             updated_at = now()
         where id = ${id}
         returning id
@@ -145,18 +149,19 @@ export class PostgresTradeCatalog implements TradeCatalogPort {
     async addImage(image: NewTradeImage): Promise<TradeImageRecord> {
         const [created] = await getPostgresClient() <TradeImageRecord[]>`
       insert into trade_images (
-        id, trade_id, position, object_key, filename, mime_type, byte_size
+        id, trade_id, position, role, object_key, filename, mime_type, byte_size
       )
       values (
         ${image.id},
         ${image.tradeId},
         coalesce((select max(position) + 1 from trade_images where trade_id = ${image.tradeId}), 0),
+        ${image.role},
         ${image.objectKey},
         ${image.name},
         ${image.type},
         ${image.size}
       )
-      returning id, filename as name, mime_type as type, byte_size as size
+      returning id, filename as name, mime_type as type, byte_size as size, role
     `;
         return created;
     }
@@ -170,6 +175,7 @@ export class PostgresTradeCatalog implements TradeCatalogPort {
         filename as name,
         mime_type as type,
         byte_size as size
+        , role
       from trade_images
       where id = ${id}
     `;

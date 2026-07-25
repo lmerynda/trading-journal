@@ -1,10 +1,12 @@
 export type TradeDirection = "long" | "short";
+export type TradeImageRole = "entry" | "exits";
 
 export interface TradeImage {
     id: string;
     name: string;
     type: string;
     size: number;
+    role: TradeImageRole;
 }
 
 export interface TradeReview {
@@ -13,6 +15,7 @@ export interface TradeReview {
     date: string;
     direction: TradeDirection;
     notes: string;
+    youtubeUrl: string | null;
     tags: string[];
     images: TradeImage[];
     createdAt: string;
@@ -53,6 +56,7 @@ export function saveTrade(trade: TradeReview): Promise<TradeReview> {
             date: trade.date,
             direction: trade.direction,
             notes: trade.notes,
+            youtubeUrl: trade.youtubeUrl,
             tags: trade.tags,
         }),
     });
@@ -68,9 +72,11 @@ export async function removeTrade(id: string): Promise<void> {
 export async function uploadTradeImage(
     tradeId: string,
     image: File,
+    role: TradeImageRole,
 ): Promise<TradeImage> {
     const form = new FormData();
     form.set("image", image);
+    form.set("role", role);
     return request<TradeImage>(`/api/trades/${tradeId}/images`, {
         method: "POST",
         body: form,

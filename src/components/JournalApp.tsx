@@ -2,6 +2,7 @@
 
 import {
   type ChangeEvent,
+  type ClipboardEvent as ReactClipboardEvent,
   type DragEvent,
   type KeyboardEvent,
   type ReactNode,
@@ -17,6 +18,7 @@ import {
   saveTrade,
   uploadTradeImage,
   type TradeImage,
+  type TradeImageRole,
   type TradeReview,
 } from "../lib/trade-library";
 
@@ -60,15 +62,43 @@ function FieldLabel({ children }: { children: ReactNode }) {
   return <span className="field-label">{children}</span>;
 }
 
+function youtubeEmbedUrl(value: string | null): string | null {
+  if (!value) return null;
+
+  try {
+    const url = new URL(value);
+    const hostname = url.hostname.replace(/^www\./, "");
+    let videoId: string | null = null;
+
+    if (hostname === "youtu.be") {
+      videoId = url.pathname.split("/").filter(Boolean)[0] ?? null;
+    } else if (hostname === "youtube.com") {
+      videoId =
+        url.searchParams.get("v") ??
+        url.pathname.match(/^\/(?:shorts|live|embed)\/([^/]+)/)?.[1] ??
+        null;
+    }
+
+    return videoId && /^[\w-]{6,}$/.test(videoId)
+      ? `https://www.youtube-nocookie.com/embed/${videoId}`
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 export function JournalApp() {
   const [trades, setTrades] = useState<TradeReview[]>([]);
   const [selectedId, setSelectedId] = useState("");
   const [tagDraft, setTagDraft] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-  const [isDragging, setIsDragging] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
+  const [draggingRole, setDraggingRole] = useState<TradeImageRole | null>(null);
+  const [uploadingRole, setUploadingRole] = useState<TradeImageRole | null>(
+    null,
+  );
   const [errorMessage, setErrorMessage] = useState("");
-  const fileInput = useRef<HTMLInputElement>(null);
+  const entryFileInput = useRef<HTMLInputElement>(null);
+  const exitsFileInput = useRef<HTMLInputElement>(null);
   const saveTimers = useRef<Record<string, number>>({});
   const selectedTrade = trades.find((trade) => trade.id === selectedId);
 
@@ -147,18 +177,21 @@ export function JournalApp() {
     }
   }
 
-  async function addImages(files: FileList | File[]): Promise<void> {
+  async function addImages(
+    files: FileList | File[],
+    role: TradeImageRole,
+  ): Promise<void> {
     if (!selectedTrade) return;
     const images = Array.from(files).filter((file) =>
       file.type.startsWith("image/"),
     );
     if (images.length === 0) return;
 
-    setIsUploading(true);
+    setUploadingRole(role);
     setErrorMessage("");
     try {
       for (const image of images) {
-        const created = await uploadTradeImage(selectedTrade.id, image);
+        const created = await uploadTradeImage(selectedTrade.id, image, role);
         setTrades((current) =>
           current.map((trade) =>
             trade.id === selectedTrade.id
@@ -170,32 +203,36 @@ export function JournalApp() {
     } catch {
       setErrorMessage("One or more screenshots could not be uploaded.");
     } finally {
-      setIsUploading(false);
+      setUploadingRole(null);
     }
   }
 
-  function handleFiles(event: ChangeEvent<HTMLInputElement>): void {
-    if (event.target.files) void addImages(event.target.files);
+  function handleFiles(
+    event: ChangeEvent<HTMLInputElement>,
+    role: TradeImageRole,
+  ): void {
+    if (event.target.files) void addImages(event.target.files, role);
     event.target.value = "";
   }
 
-  function handleDrop(event: DragEvent<HTMLDivElement>): void {
+  function handleDrop(
+    event: DragEvent<HTMLDivElement>,
+    role: TradeImageRole,
+  ): void {
     event.preventDefault();
-    setIsDragging(false);
-    void addImages(event.dataTransfer.files);
+    setDraggingRole(null);
+    void addImages(event.dataTransfer.files, role);
   }
 
-  useEffect(() => {
-    function handlePaste(event: ClipboardEvent): void {
-      const images = Array.from(event.clipboardData?.files ?? []).filter(
-        (file) => file.type.startsWith("image/"),
-      );
-      if (images.length > 0) void addImages(images);
-    }
-
-    window.addEventListener("paste", handlePaste);
-    return () => window.removeEventListener("paste", handlePaste);
-  });
+  function handlePaste(
+    event: ReactClipboardEvent<HTMLDivElement>,
+    role: TradeImageRole,
+  ): void {
+    const images = Array.from(event.clipboardData.files).filter((file) =>
+      file.type.startsWith("image/"),
+    );
+    if (images.length > 0) void addImages(images, role);
+  }
 
   return (
     <main className="library-shell">
@@ -365,73 +402,136 @@ export function JournalApp() {
                   <p className="eyebrow">Primary review</p>
                   <h2>Charts</h2>
                 </div>
-                <button
-                  className="upload-button"
-                  type="button"
-                  disabled={isUploading}
-                  onClick={() => fileInput.current?.click()}
-                >
-                  <span aria-hidden="true">+</span>{" "}
-                  {isUploading ? "Uploading..." : "Add images"}
-                </button>
-                <input
-                  ref={fileInput}
-                  className="visually-hidden"
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handleFiles}
-                />
               </div>
 
-              {selectedTrade.images.length > 0 && (
-                <div className="screenshots">
-                  {selectedTrade.images.map((image) => (
-                    <Screenshot
-                      image={image}
-                      key={image.id}
-                      onRemove={async () => {
-                        try {
-                          await removeTradeImage(selectedTrade.id, image.id);
-                          setTrades((current) =>
-                            current.map((trade) =>
-                              trade.id === selectedTrade.id
-                                ? {
-                                    ...trade,
-                                    images: trade.images.filter(
-                                      (candidate) => candidate.id !== image.id,
-                                    ),
-                                  }
-                                : trade,
-                            ),
-                          );
-                        } catch {
-                          setErrorMessage(
-                            "The screenshot could not be removed.",
-                          );
-                        }
-                      }}
+              {(
+                [
+                  {
+                    role: "entry" as const,
+                    number: "01",
+                    title: "When taking entry",
+                    input: entryFileInput,
+                  },
+                  {
+                    role: "exits" as const,
+                    number: "02",
+                    title: "After taking all exits",
+                    input: exitsFileInput,
+                  },
+                ] satisfies Array<{
+                  role: TradeImageRole;
+                  number: string;
+                  title: string;
+                  input: React.RefObject<HTMLInputElement | null>;
+                }>
+              ).map((chart) => (
+                <div className="chart-group" key={chart.role}>
+                  <div className="chart-group-heading">
+                    <span>{chart.number}</span>
+                    <h3>{chart.title}</h3>
+                    <button
+                      className="upload-button"
+                      type="button"
+                      disabled={uploadingRole !== null}
+                      onClick={() => chart.input.current?.click()}
+                    >
+                      <span aria-hidden="true">+</span>{" "}
+                      {uploadingRole === chart.role
+                        ? "Uploading..."
+                        : "Add chart"}
+                    </button>
+                    <input
+                      ref={chart.input}
+                      className="visually-hidden"
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={(event) => handleFiles(event, chart.role)}
                     />
-                  ))}
+                  </div>
+
+                  <div className="screenshots">
+                    {selectedTrade.images
+                      .filter((image) => image.role === chart.role)
+                      .map((image) => (
+                        <Screenshot
+                          image={image}
+                          key={image.id}
+                          onRemove={async () => {
+                            try {
+                              await removeTradeImage(
+                                selectedTrade.id,
+                                image.id,
+                              );
+                              setTrades((current) =>
+                                current.map((trade) =>
+                                  trade.id === selectedTrade.id
+                                    ? {
+                                        ...trade,
+                                        images: trade.images.filter(
+                                          (candidate) =>
+                                            candidate.id !== image.id,
+                                        ),
+                                      }
+                                    : trade,
+                                ),
+                              );
+                            } catch {
+                              setErrorMessage(
+                                "The screenshot could not be removed.",
+                              );
+                            }
+                          }}
+                        />
+                      ))}
+                  </div>
+
+                  <div
+                    className={`drop-zone ${draggingRole === chart.role ? "is-dragging" : ""}`}
+                    tabIndex={0}
+                    onPaste={(event) => handlePaste(event, chart.role)}
+                    onDragEnter={(event) => {
+                      event.preventDefault();
+                      setDraggingRole(chart.role);
+                    }}
+                    onDragOver={(event) => event.preventDefault()}
+                    onDragLeave={() => setDraggingRole(null)}
+                    onDrop={(event) => handleDrop(event, chart.role)}
+                  >
+                    <span className="drop-icon" aria-hidden="true">
+                      +
+                    </span>
+                    <strong>Drop or paste chart</strong>
+                  </div>
+                </div>
+              ))}
+            </section>
+
+            <section className="document-section video-section">
+              <p className="eyebrow">Optional replay</p>
+              <h2>YouTube video</h2>
+              <input
+                type="url"
+                aria-label="YouTube video URL"
+                placeholder="https://youtube.com/watch?v=..."
+                value={selectedTrade.youtubeUrl ?? ""}
+                onChange={(event) =>
+                  updateTrade((trade) => ({
+                    ...trade,
+                    youtubeUrl: event.target.value || null,
+                  }))
+                }
+              />
+              {youtubeEmbedUrl(selectedTrade.youtubeUrl) && (
+                <div className="video-frame">
+                  <iframe
+                    src={youtubeEmbedUrl(selectedTrade.youtubeUrl) ?? undefined}
+                    title="Trade replay video"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
                 </div>
               )}
-
-              <div
-                className={`drop-zone ${isDragging ? "is-dragging" : ""}`}
-                onDragEnter={(event) => {
-                  event.preventDefault();
-                  setIsDragging(true);
-                }}
-                onDragOver={(event) => event.preventDefault()}
-                onDragLeave={() => setIsDragging(false)}
-                onDrop={handleDrop}
-              >
-                <span className="drop-icon" aria-hidden="true">
-                  +
-                </span>
-                <strong>Drop screenshots here</strong>
-                <span>or paste directly from the clipboard</span>
-              </div>
             </section>
 
             <section className="document-section notes-section">

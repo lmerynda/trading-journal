@@ -7,19 +7,19 @@ import postgres from "postgres";
 const databaseUrl = process.env.DATABASE_URL;
 
 if (!databaseUrl) {
-    throw new Error("DATABASE_URL is required to apply migrations.");
+  throw new Error("DATABASE_URL is required to apply migrations.");
 }
 
 async function main(connectionUrl: string): Promise<void> {
-    const client = postgres(connectionUrl, { max: 1 });
-    const database = drizzle(client);
+  const client = postgres(connectionUrl, { max: 1 });
+  const database = drizzle(client);
 
-    try {
-        await migrate(database, { migrationsFolder: "drizzle" });
-        console.log("Database migrations are current.");
-    } finally {
-        await client.end();
-    }
+  try {
+    await migrate(database, { migrationsFolder: "drizzle" });
+    console.log("Database migrations are current.");
+  } finally {
+    await client.end();
+  }
 }
 
 void main(databaseUrl);

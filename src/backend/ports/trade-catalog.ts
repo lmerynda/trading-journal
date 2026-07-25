@@ -1,10 +1,12 @@
 export type TradeDirection = "long" | "short";
+export type TradeImageRole = "entry" | "exits";
 
 export interface TradeImageRecord {
     id: string;
     name: string;
     type: string;
     size: number;
+    role: TradeImageRole;
 }
 
 export interface TradeReviewRecord {
@@ -13,6 +15,7 @@ export interface TradeReviewRecord {
     date: string;
     direction: TradeDirection;
     notes: string;
+    youtubeUrl: string | null;
     tags: string[];
     images: TradeImageRecord[];
     createdAt: string;
@@ -30,6 +33,7 @@ export interface UpdateTradeInput {
     date: string;
     direction: TradeDirection;
     notes: string;
+    youtubeUrl: string | null;
     tags: string[];
 }
 
@@ -40,6 +44,7 @@ export interface NewTradeImage {
     name: string;
     type: string;
     size: number;
+    role: TradeImageRole;
 }
 
 export interface StoredTradeImage extends TradeImageRecord {

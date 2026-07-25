@@ -19,6 +19,7 @@ export const applicationMetadata = pgTable("application_metadata", {
 });
 
 export const tradeDirection = pgEnum("trade_direction", ["long", "short"]);
+export const tradeImageRole = pgEnum("trade_image_role", ["entry", "exits"]);
 
 export const trades = pgTable(
     "trades",
@@ -28,6 +29,7 @@ export const trades = pgTable(
         tradeDate: date("trade_date").notNull(),
         direction: tradeDirection("direction").notNull(),
         notes: text("notes").default("").notNull(),
+        youtubeUrl: text("youtube_url"),
         createdAt: timestamp("created_at", { withTimezone: true })
             .defaultNow()
             .notNull(),
@@ -46,6 +48,7 @@ export const tradeImages = pgTable(
             .notNull()
             .references(() => trades.id, { onDelete: "cascade" }),
         position: integer("position").notNull(),
+        role: tradeImageRole("role").notNull(),
         objectKey: text("object_key").notNull().unique(),
         filename: text("filename").notNull(),
         mimeType: text("mime_type").notNull(),

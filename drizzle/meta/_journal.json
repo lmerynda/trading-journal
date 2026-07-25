@@ -15,6 +15,13 @@
       "when": 1785002359578,
       "tag": "0001_brave_inhumans",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785003781624,
+      "tag": "0002_rare_iron_fist",
+      "breakpoints": true
     }
   ]
 }
