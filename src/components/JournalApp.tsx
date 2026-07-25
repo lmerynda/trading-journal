@@ -1,334 +1,412 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { sampleJournalDay } from "../lib/sampleData";
-import { buildJournalStats } from "../lib/stats";
 import {
-  calculateTradePnl,
-  calculateTicks,
-  formatCurrency,
-  formatPercent,
-} from "../lib/futures";
-import type { ReplaySpeed } from "../lib/types";
+  type ChangeEvent,
+  type DragEvent,
+  type KeyboardEvent,
+  type ReactNode,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import {
+  createTrade,
+  listTrades,
+  removeTrade,
+  saveTrade,
+  type TradeImage,
+  type TradeReview,
+} from "../lib/trade-library";
 
-const speedOptions: ReplaySpeed[] = [1, 2, 4, 8];
+function formatDate(value: string): string {
+  return new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(`${value}T12:00:00`));
+}
+
+function Screenshot({
+  image,
+  onRemove,
+}: {
+  image: TradeImage;
+  onRemove: () => void;
+}) {
+  const [source] = useState(() => URL.createObjectURL(image.blob));
+
+  useEffect(() => () => URL.revokeObjectURL(source), [source]);
+
+  return (
+    <figure className="screenshot">
+      <a href={source} target="_blank" rel="noreferrer" title="Open full size">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={source} alt="Annotated trade chart" />
+      </a>
+      <button
+        className="icon-button screenshot-remove"
+        type="button"
+        title={`Remove ${image.name}`}
+        aria-label={`Remove ${image.name}`}
+        onClick={onRemove}
+      >
+        ×
+      </button>
+    </figure>
+  );
+}
+
+function FieldLabel({ children }: { children: ReactNode }) {
+  return <span className="field-label">{children}</span>;
+}
 
 export function JournalApp() {
-  const [cursor, setCursor] = useState(7);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [speed, setSpeed] = useState<ReplaySpeed>(2);
-  const [selectedTradeId, setSelectedTradeId] = useState(
-    sampleJournalDay.trades[0]?.id ?? "",
-  );
-
-  const visibleBars = sampleJournalDay.bars.slice(0, cursor + 1);
-  const activeBar = visibleBars[visibleBars.length - 1];
+  const [trades, setTrades] = useState<TradeReview[]>([]);
+  const [selectedId, setSelectedId] = useState("");
+  const [tagDraft, setTagDraft] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const selectedTrade = trades.find((trade) => trade.id === selectedId);
 
   useEffect(() => {
-    if (!isPlaying) {
+    void listTrades()
+      .then((storedTrades) => {
+        setTrades(storedTrades);
+        setSelectedId(storedTrades[0]?.id ?? "");
+      })
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  const existingTags = Array.from(
+    new Set(trades.flatMap((trade) => trade.tags)),
+  ).sort();
+
+  function updateTrade(update: (trade: TradeReview) => TradeReview): void {
+    if (!selectedTrade) return;
+
+    const next = {
+      ...update(selectedTrade),
+      updatedAt: new Date().toISOString(),
+    };
+    setTrades((current) =>
+      current.map((trade) => (trade.id === next.id ? next : trade)),
+    );
+    void saveTrade(next);
+  }
+
+  async function handleCreate(): Promise<void> {
+    const trade = createTrade();
+    await saveTrade(trade);
+    setTrades((current) => [trade, ...current]);
+    setSelectedId(trade.id);
+  }
+
+  async function handleDelete(): Promise<void> {
+    if (!selectedTrade || !window.confirm("Delete this trade review?")) return;
+
+    await removeTrade(selectedTrade.id);
+    const remaining = trades.filter((trade) => trade.id !== selectedTrade.id);
+    setTrades(remaining);
+    setSelectedId(remaining[0]?.id ?? "");
+  }
+
+  function addTag(): void {
+    const tag = tagDraft.trim().replace(/^#/, "");
+    if (!tag || !selectedTrade || selectedTrade.tags.includes(tag)) {
+      setTagDraft("");
       return;
     }
+    updateTrade((trade) => ({ ...trade, tags: [...trade.tags, tag] }));
+    setTagDraft("");
+  }
 
-    const timer = window.setInterval(() => {
-      setCursor((current) => {
-        if (current >= sampleJournalDay.bars.length - 1) {
-          setIsPlaying(false);
-          return current;
-        }
+  function handleTagKeyDown(event: KeyboardEvent<HTMLInputElement>): void {
+    if (event.key === "Enter" || event.key === ",") {
+      event.preventDefault();
+      addTag();
+    }
+  }
 
-        return current + 1;
-      });
-    }, 1200 / speed);
+  function addImages(files: FileList | File[]): void {
+    const images: TradeImage[] = Array.from(files)
+      .filter((file) => file.type.startsWith("image/"))
+      .map((file) => ({
+        id: crypto.randomUUID(),
+        name: file.name || "Pasted screenshot",
+        type: file.type,
+        blob: file,
+      }));
+    if (images.length === 0) return;
 
-    return () => window.clearInterval(timer);
-  }, [isPlaying, speed]);
+    updateTrade((trade) => ({
+      ...trade,
+      images: [...trade.images, ...images],
+    }));
+  }
 
-  const stats = useMemo(
-    () =>
-      buildJournalStats(sampleJournalDay.trades, sampleJournalDay.instrument),
-    [],
-  );
+  function handleFiles(event: ChangeEvent<HTMLInputElement>): void {
+    if (event.target.files) addImages(event.target.files);
+    event.target.value = "";
+  }
 
-  const selectedTrade =
-    sampleJournalDay.trades.find((trade) => trade.id === selectedTradeId) ??
-    sampleJournalDay.trades[0];
+  function handleDrop(event: DragEvent<HTMLDivElement>): void {
+    event.preventDefault();
+    setIsDragging(false);
+    addImages(event.dataTransfer.files);
+  }
 
-  const chartMin = Math.min(...visibleBars.map((bar) => bar.low));
-  const chartMax = Math.max(...visibleBars.map((bar) => bar.high));
-  const priceRange = chartMax - chartMin || 1;
+  useEffect(() => {
+    function handlePaste(event: ClipboardEvent): void {
+      const images = Array.from(event.clipboardData?.files ?? []).filter(
+        (file) => file.type.startsWith("image/"),
+      );
+      if (images.length > 0) addImages(images);
+    }
+
+    window.addEventListener("paste", handlePaste);
+    return () => window.removeEventListener("paste", handlePaste);
+  });
 
   return (
-    <div className="app-shell">
-      <aside className="sidebar">
-        <p className="eyebrow">Trading Journal MVP</p>
-        <h1>Futures replay and review</h1>
-        <p className="lede">
-          Start with deterministic replay, structured journaling, and stats that
-          reflect actual futures tick economics.
-        </p>
+    <main className="library-shell">
+      <aside className="library-sidebar">
+        <header className="sidebar-header">
+          <div>
+            <p className="eyebrow">Review library</p>
+            <h1>Trades</h1>
+          </div>
+          <button
+            className="new-trade-button"
+            type="button"
+            onClick={() => void handleCreate()}
+          >
+            <span aria-hidden="true">+</span> New trade
+          </button>
+        </header>
 
-        <section className="panel">
-          <div className="panel-header">
-            <h2>Session</h2>
-            <span>{sampleJournalDay.date}</span>
-          </div>
-          <dl className="meta-grid">
-            <div>
-              <dt>Contract</dt>
-              <dd>{sampleJournalDay.instrument.contract}</dd>
-            </div>
-            <div>
-              <dt>Instrument</dt>
-              <dd>{sampleJournalDay.instrument.name}</dd>
-            </div>
-            <div>
-              <dt>Tick size</dt>
-              <dd>{sampleJournalDay.instrument.tickSize}</dd>
-            </div>
-            <div>
-              <dt>Tick value</dt>
-              <dd>{formatCurrency(sampleJournalDay.instrument.tickValue)}</dd>
-            </div>
-          </dl>
-        </section>
+        <nav className="trade-list" aria-label="Trade reviews">
+          {trades.map((trade) => (
+            <button
+              className={`trade-list-item ${trade.id === selectedId ? "is-selected" : ""}`}
+              type="button"
+              key={trade.id}
+              onClick={() => setSelectedId(trade.id)}
+            >
+              <span className="trade-list-topline">
+                <time>{formatDate(trade.date)}</time>
+                <span className={`direction direction-${trade.direction}`}>
+                  {trade.direction}
+                </span>
+              </span>
+              <strong>{trade.title || "Untitled trade"}</strong>
+              {trade.tags.length > 0 && (
+                <span className="list-tags">
+                  {trade.tags.slice(0, 3).map((tag) => (
+                    <span key={tag}>#{tag}</span>
+                  ))}
+                </span>
+              )}
+            </button>
+          ))}
+        </nav>
 
-        <section className="panel">
-          <div className="panel-header">
-            <h2>Stats</h2>
-            <span>{stats.totalTrades} trades</span>
+        {!isLoading && trades.length === 0 && (
+          <div className="sidebar-empty">
+            <p>No reviews yet.</p>
+            <span>Create one after your next trade.</span>
           </div>
-          <div className="stat-grid">
-            <StatCard
-              label="Net PnL"
-              value={formatCurrency(stats.netPnl)}
-              accent="good"
-            />
-            <StatCard
-              label="Average Trade"
-              value={formatCurrency(stats.averagePnl)}
-            />
-            <StatCard label="Win Rate" value={formatPercent(stats.winRate)} />
-            <StatCard label="Best Setup" value={stats.bestSetup} />
-          </div>
-        </section>
+        )}
+        <footer className="sidebar-footer">{trades.length} reviews</footer>
       </aside>
 
-      <main className="content">
-        <section className="hero">
-          <div>
-            <p className="eyebrow">Replay</p>
-            <h2>{sampleJournalDay.instrument.symbol} focused review</h2>
-          </div>
-          <div className="hero-actions">
-            <button
-              className="button"
-              onClick={() => setCursor((current) => Math.max(0, current - 1))}
-            >
-              Step back
-            </button>
-            <button
-              className="button button-strong"
-              onClick={() => setIsPlaying((value) => !value)}
-            >
-              {isPlaying ? "Pause" : "Play"}
-            </button>
-            <button
-              className="button"
-              onClick={() =>
-                setCursor((current) =>
-                  Math.min(sampleJournalDay.bars.length - 1, current + 1),
-                )
-              }
-            >
-              Step forward
-            </button>
-          </div>
-        </section>
+      <section className="workspace">
+        {selectedTrade ? (
+          <div className="review-document">
+            <header className="document-header">
+              <input
+                className="title-input"
+                aria-label="Trade title"
+                value={selectedTrade.title}
+                onChange={(event) =>
+                  updateTrade((trade) => ({
+                    ...trade,
+                    title: event.target.value,
+                  }))
+                }
+              />
+              <button
+                className="icon-button delete-trade"
+                type="button"
+                title="Delete trade"
+                aria-label="Delete trade"
+                onClick={() => void handleDelete()}
+              >
+                ×
+              </button>
+            </header>
 
-        <section className="panel chart-panel">
-          <div className="panel-header">
-            <h2>Price development</h2>
-            <span>
-              Bar {cursor + 1} / {sampleJournalDay.bars.length}
-            </span>
-          </div>
-          <div className="replay-toolbar">
-            <div className="speed-group">
-              {speedOptions.map((option) => (
-                <button
-                  key={option}
-                  className={option === speed ? "chip chip-active" : "chip"}
-                  onClick={() => setSpeed(option)}
-                >
-                  {option}x
-                </button>
-              ))}
-            </div>
-            <div className="bar-readout">
-              <span>
-                {new Date(activeBar.time).toLocaleTimeString("en-US", {
-                  timeStyle: "short",
-                })}
-              </span>
-              <span>Close {activeBar.close.toFixed(2)}</span>
-              <span>Vol {activeBar.volume}</span>
-            </div>
-          </div>
-          <div className="chart">
-            {visibleBars.map((bar) => {
-              const high = ((chartMax - bar.high) / priceRange) * 100;
-              const low = ((chartMax - bar.low) / priceRange) * 100;
-              const open = ((chartMax - bar.open) / priceRange) * 100;
-              const close = ((chartMax - bar.close) / priceRange) * 100;
-              const bullish = bar.close >= bar.open;
+            <div className="properties">
+              <label className="property">
+                <FieldLabel>Date</FieldLabel>
+                <input
+                  type="date"
+                  value={selectedTrade.date}
+                  onChange={(event) =>
+                    updateTrade((trade) => ({
+                      ...trade,
+                      date: event.target.value,
+                    }))
+                  }
+                />
+              </label>
 
-              return (
-                <div key={bar.time} className="candle-slot">
-                  <div
-                    className="wick"
-                    style={{ top: `${high}%`, height: `${low - high}%` }}
-                  />
-                  <div
-                    className={
-                      bullish ? "candle candle-up" : "candle candle-down"
-                    }
-                    style={{
-                      top: `${Math.min(open, close)}%`,
-                      height: `${Math.max(8, Math.abs(close - open))}%`,
-                    }}
-                  />
+              <div className="property">
+                <FieldLabel>Direction</FieldLabel>
+                <div className="direction-control" aria-label="Direction">
+                  {(["long", "short"] as const).map((direction) => (
+                    <button
+                      type="button"
+                      className={
+                        selectedTrade.direction === direction ? "is-active" : ""
+                      }
+                      key={direction}
+                      onClick={() =>
+                        updateTrade((trade) => ({ ...trade, direction }))
+                      }
+                    >
+                      {direction}
+                    </button>
+                  ))}
                 </div>
-              );
-            })}
-          </div>
-        </section>
+              </div>
 
-        <section className="lower-grid">
-          <section className="panel">
-            <div className="panel-header">
-              <h2>Trade log</h2>
-              <span>
-                {stats.winners}W / {stats.losers}L
-              </span>
+              <div className="property property-tags">
+                <FieldLabel>Tags</FieldLabel>
+                <div className="tag-editor">
+                  {selectedTrade.tags.map((tag) => (
+                    <button
+                      className="tag"
+                      type="button"
+                      title={`Remove ${tag}`}
+                      key={tag}
+                      onClick={() =>
+                        updateTrade((trade) => ({
+                          ...trade,
+                          tags: trade.tags.filter(
+                            (candidate) => candidate !== tag,
+                          ),
+                        }))
+                      }
+                    >
+                      #{tag} <span aria-hidden="true">×</span>
+                    </button>
+                  ))}
+                  <input
+                    aria-label="Add tag"
+                    placeholder="Add a tag"
+                    list="existing-tags"
+                    value={tagDraft}
+                    onChange={(event) => setTagDraft(event.target.value)}
+                    onKeyDown={handleTagKeyDown}
+                    onBlur={addTag}
+                  />
+                  <datalist id="existing-tags">
+                    {existingTags.map((tag) => (
+                      <option value={tag} key={tag} />
+                    ))}
+                  </datalist>
+                </div>
+              </div>
             </div>
-            <div className="trade-list">
-              {sampleJournalDay.trades.map((trade) => {
-                const pnl = calculateTradePnl(
-                  trade,
-                  sampleJournalDay.instrument,
-                );
-                const ticks = calculateTicks(
-                  trade.entryPrice,
-                  trade.exitPrice,
-                  sampleJournalDay.instrument.tickSize,
-                  trade.side,
-                );
 
-                return (
-                  <button
-                    key={trade.id}
-                    className={
-                      trade.id === selectedTrade.id
-                        ? "trade-card trade-card-active"
-                        : "trade-card"
-                    }
-                    onClick={() => setSelectedTradeId(trade.id)}
-                  >
-                    <div className="trade-card-top">
-                      <strong>{trade.setup}</strong>
-                      <span
-                        className={
-                          pnl >= 0 ? "pill pill-good" : "pill pill-bad"
-                        }
-                      >
-                        {formatCurrency(pnl)}
-                      </span>
-                    </div>
-                    <p>
-                      {trade.side.toUpperCase()} {trade.contracts} contracts,{" "}
-                      {ticks.toFixed(0)} ticks
-                    </p>
-                    <p className="muted">{trade.notes}</p>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
+            <section className="document-section">
+              <div className="section-heading">
+                <div>
+                  <p className="eyebrow">Primary review</p>
+                  <h2>Charts</h2>
+                </div>
+                <button
+                  className="upload-button"
+                  type="button"
+                  onClick={() => fileInput.current?.click()}
+                >
+                  <span aria-hidden="true">+</span> Add images
+                </button>
+                <input
+                  ref={fileInput}
+                  className="visually-hidden"
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleFiles}
+                />
+              </div>
 
-          <section className="panel">
-            <div className="panel-header">
-              <h2>Review notes</h2>
-              <span>{selectedTrade.tags.join(" · ")}</span>
-            </div>
-            <div className="review-stack">
-              <ReviewRow
-                label="Entry"
-                value={selectedTrade.entryPrice.toFixed(2)}
-              />
-              <ReviewRow
-                label="Exit"
-                value={selectedTrade.exitPrice.toFixed(2)}
-              />
-              <ReviewRow
-                label="Confidence"
-                value={formatPercent(selectedTrade.confidence)}
-              />
-              <ReviewRow
-                label="Rule adherence"
-                value={formatPercent(selectedTrade.ruleAdherence)}
-              />
-              <ReviewRow
-                label="Session note"
-                value={sampleJournalDay.notes}
-                multiline
-              />
-              <ReviewRow
-                label="Trade note"
+              {selectedTrade.images.length > 0 && (
+                <div className="screenshots">
+                  {selectedTrade.images.map((image) => (
+                    <Screenshot
+                      image={image}
+                      key={image.id}
+                      onRemove={() =>
+                        updateTrade((trade) => ({
+                          ...trade,
+                          images: trade.images.filter(
+                            (candidate) => candidate.id !== image.id,
+                          ),
+                        }))
+                      }
+                    />
+                  ))}
+                </div>
+              )}
+
+              <div
+                className={`drop-zone ${isDragging ? "is-dragging" : ""}`}
+                onDragEnter={(event) => {
+                  event.preventDefault();
+                  setIsDragging(true);
+                }}
+                onDragOver={(event) => event.preventDefault()}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={handleDrop}
+              >
+                <span className="drop-icon" aria-hidden="true">
+                  +
+                </span>
+                <strong>Drop screenshots here</strong>
+                <span>or paste directly from the clipboard</span>
+              </div>
+            </section>
+
+            <section className="document-section notes-section">
+              <p className="eyebrow">Secondary notes</p>
+              <h2>Notes</h2>
+              <textarea
+                aria-label="Trade notes"
+                placeholder="Add context, lessons, or anything that is not already on the charts..."
                 value={selectedTrade.notes}
-                multiline
+                onChange={(event) =>
+                  updateTrade((trade) => ({
+                    ...trade,
+                    notes: event.target.value,
+                  }))
+                }
               />
-            </div>
-          </section>
-        </section>
-      </main>
-    </div>
-  );
-}
-
-function StatCard({
-  label,
-  value,
-  accent,
-}: {
-  label: string;
-  value: string;
-  accent?: "good";
-}) {
-  return (
-    <article
-      className={accent === "good" ? "stat-card stat-card-good" : "stat-card"}
-    >
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </article>
-  );
-}
-
-function ReviewRow({
-  label,
-  value,
-  multiline = false,
-}: {
-  label: string;
-  value: string;
-  multiline?: boolean;
-}) {
-  return (
-    <div
-      className={multiline ? "review-row review-row-multiline" : "review-row"}
-    >
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
+            </section>
+          </div>
+        ) : (
+          <div className="workspace-empty">
+            <span className="empty-mark">T</span>
+            <h2>Your trade reviews live here.</h2>
+            <p>Create a review, add your annotated charts, and move on.</p>
+            <button type="button" onClick={() => void handleCreate()}>
+              Create first review
+            </button>
+          </div>
+        )}
+      </section>
+    </main>
   );
 }
