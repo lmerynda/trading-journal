@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   referrer: "no-referrer",
 };
 
-export default async function AuthorLoginPage({
+export default async function AdminLoginPage({
   params,
   searchParams,
 }: {

@@ -41,7 +41,7 @@ openssl rand -hex 24      # ADMIN_ENTRY_KEY
 openssl rand -base64 48   # ADMIN_SESSION_SECRET
 ```
 
-Open `/author/<ADMIN_ENTRY_KEY>` manually to sign in with `ADMIN_PASSWORD`. The
+Open `/admin/<ADMIN_ENTRY_KEY>` manually to sign in with `ADMIN_PASSWORD`. The
 route is intentionally not linked from the public application, but the password
 and signed HTTP-only session are the security boundary. Changing
 `ADMIN_SESSION_SECRET` invalidates every existing session.
