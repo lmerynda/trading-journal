@@ -13,7 +13,7 @@ Use PostgreSQL as the system of record and Drizzle for typed schema definitions 
 
 Infrastructure code under src/backend/infrastructure/database owns Drizzle and the PostgreSQL driver. Application and domain modules depend only on repository ports and plain TypeScript DTOs. Next.js adapters never issue SQL or import the schema directly.
 
-Migrations are committed under drizzle/, are additive by default, and run through pnpm db:migrate. CI applies all committed migrations to an empty PostgreSQL service. Production deploys apply migrations before starting application code that requires them.
+Migrations are committed under drizzle/, are additive by default, and run through `npm run db:migrate`. CI applies all committed migrations to an empty PostgreSQL service. Production deploys apply migrations before starting application code that requires them.
 
 Persisted money, price, and quantity fields will use explicit decimal precision. Timestamps represent instants; a daily review separately stores its trading date and IANA time zone.
 

@@ -4,4 +4,3 @@ dist
 .next
 coverage
 *.tsbuildinfo
-.pnpm-store

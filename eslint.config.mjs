@@ -6,11 +6,7 @@ export default defineConfig([
   ...nextVitals,
   ...nextTypeScript,
   {
-    files: [
-      "src/app/**/*.{ts,tsx}",
-      "src/components/**/*.{ts,tsx}",
-      "src/App.tsx",
-    ],
+    files: ["src/app/**/*.{ts,tsx}", "src/components/**/*.{ts,tsx}"],
     rules: {
       "no-restricted-imports": [
         "error",

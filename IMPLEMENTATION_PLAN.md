@@ -97,7 +97,7 @@ The full decision and migration boundary are documented in [ADR 0001](./docs/dec
 
 ### Local development
 
-- A single pnpm package.
+- A single npm package.
 - Docker Compose for PostgreSQL and an S3-compatible local object store.
 - One command starts infrastructure, migrations, and the Next.js application.
 - Committed seed data should contain a realistic daily review with three trades, fills, and both screenshot roles.

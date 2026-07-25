@@ -1,5 +1,5 @@
 import { calculateTradePnl } from "./futures";
-import type { FuturesInstrument, Trade } from "../types";
+import type { FuturesInstrument, Trade } from "./types";
 
 export interface JournalStats {
   totalTrades: number;
@@ -20,15 +20,19 @@ export function buildJournalStats(
   const winners = pnls.filter((pnl) => pnl > 0).length;
   const losers = pnls.filter((pnl) => pnl <= 0).length;
 
-  const setupScores = trades.reduce<Record<string, number>>((accumulator, trade) => {
-    const tradePnl = calculateTradePnl(trade, instrument);
-    accumulator[trade.setup] = (accumulator[trade.setup] ?? 0) + tradePnl;
-    return accumulator;
-  }, {});
+  const setupScores = trades.reduce<Record<string, number>>(
+    (accumulator, trade) => {
+      const tradePnl = calculateTradePnl(trade, instrument);
+      accumulator[trade.setup] = (accumulator[trade.setup] ?? 0) + tradePnl;
+      return accumulator;
+    },
+    {},
+  );
 
   const bestSetup =
-    Object.entries(setupScores).sort((left, right) => right[1] - left[1])[0]?.[0] ??
-    "None yet";
+    Object.entries(setupScores).sort(
+      (left, right) => right[1] - left[1],
+    )[0]?.[0] ?? "None yet";
 
   return {
     totalTrades: trades.length,

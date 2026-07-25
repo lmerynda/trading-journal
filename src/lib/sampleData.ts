@@ -1,4 +1,4 @@
-import type { FuturesInstrument, JournalDay, PriceBar } from "../types";
+import type { FuturesInstrument, JournalDay, PriceBar } from "./types";
 
 const nqJune: FuturesInstrument = {
   symbol: "NQ",
@@ -15,9 +15,9 @@ const nqJune: FuturesInstrument = {
 function buildBars(): PriceBar[] {
   const start = new Date("2026-04-16T08:30:00-05:00").getTime();
   const closes = [
-    18342.75, 18346.5, 18339.75, 18334.5, 18331.25, 18328.75, 18336.0,
-    18344.25, 18349.5, 18353.25, 18347.75, 18341.0, 18337.75, 18343.25,
-    18351.75, 18358.0, 18363.5, 18359.75, 18355.25, 18361.0,
+    18342.75, 18346.5, 18339.75, 18334.5, 18331.25, 18328.75, 18336.0, 18344.25,
+    18349.5, 18353.25, 18347.75, 18341.0, 18337.75, 18343.25, 18351.75, 18358.0,
+    18363.5, 18359.75, 18355.25, 18361.0,
   ];
 
   return closes.map((close, index) => {

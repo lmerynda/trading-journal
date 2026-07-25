@@ -1,4 +1,4 @@
-import type { FuturesInstrument, Trade } from "../types";
+import type { FuturesInstrument, Trade } from "./types";
 
 export function calculateTicks(
   entryPrice: number,

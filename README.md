@@ -8,26 +8,26 @@ The technical architecture, data model, delivery milestones, and acceptance crit
 
 ## Local development
 
-Prerequisites: Node.js 24 or newer, pnpm 11, and Docker with Compose.
+Prerequisites: Node.js 24 or newer and Docker with Compose.
 
     cp .env.example .env
-    pnpm install
-    pnpm dev:all
+    npm install
+    npm run dev:all
 
-pnpm dev:all starts PostgreSQL and the local S3-compatible object store, applies every committed migration, and starts the single Next.js application. The app is available at http://localhost:3000; the database-aware health check is at http://localhost:3000/api/health; and the object-storage console is at http://localhost:9001.
+`npm run dev:all` starts PostgreSQL and the local S3-compatible object store, applies every committed migration, and starts the single Next.js application. The app is available at http://localhost:3000; the database-aware health check is at http://localhost:3000/api/health; and the object-storage console is at http://localhost:9001.
 
 To run parts separately:
 
     docker compose up -d --wait
-    pnpm db:migrate
-    pnpm dev
+    npm run db:migrate
+    npm run dev
 
 The complete local verification commands are:
 
-    pnpm check
-    pnpm build
+    npm run check
+    npm run build
 
-pnpm test exercises the framework-independent backend directly. It does not start Next.js, render React, or launch a browser. pnpm check:boundaries enforces the dependency direction described in [ADR 0002](./docs/decisions/0002-single-nextjs-application.md).
+`npm test` exercises the framework-independent backend directly. It does not start Next.js, render React, or launch a browser. `npm run check:boundaries` enforces the dependency direction described in [ADR 0002](./docs/decisions/0002-single-nextjs-application.md).
 
 ## Product concept
 

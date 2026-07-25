@@ -1,18 +1,25 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { sampleJournalDay } from "./lib/sampleData";
-import { buildJournalStats } from "./lib/stats";
-import { calculateTradePnl, calculateTicks, formatCurrency, formatPercent } from "./lib/futures";
-import type { ReplaySpeed } from "./types";
+import { sampleJournalDay } from "../lib/sampleData";
+import { buildJournalStats } from "../lib/stats";
+import {
+  calculateTradePnl,
+  calculateTicks,
+  formatCurrency,
+  formatPercent,
+} from "../lib/futures";
+import type { ReplaySpeed } from "../lib/types";
 
 const speedOptions: ReplaySpeed[] = [1, 2, 4, 8];
 
-export function App() {
+export function JournalApp() {
   const [cursor, setCursor] = useState(7);
   const [isPlaying, setIsPlaying] = useState(false);
   const [speed, setSpeed] = useState<ReplaySpeed>(2);
-  const [selectedTradeId, setSelectedTradeId] = useState(sampleJournalDay.trades[0]?.id ?? "");
+  const [selectedTradeId, setSelectedTradeId] = useState(
+    sampleJournalDay.trades[0]?.id ?? "",
+  );
 
   const visibleBars = sampleJournalDay.bars.slice(0, cursor + 1);
   const activeBar = visibleBars[visibleBars.length - 1];
@@ -37,7 +44,8 @@ export function App() {
   }, [isPlaying, speed]);
 
   const stats = useMemo(
-    () => buildJournalStats(sampleJournalDay.trades, sampleJournalDay.instrument),
+    () =>
+      buildJournalStats(sampleJournalDay.trades, sampleJournalDay.instrument),
     [],
   );
 
@@ -55,8 +63,8 @@ export function App() {
         <p className="eyebrow">Trading Journal MVP</p>
         <h1>Futures replay and review</h1>
         <p className="lede">
-          Start with deterministic replay, structured journaling, and stats that reflect
-          actual futures tick economics.
+          Start with deterministic replay, structured journaling, and stats that
+          reflect actual futures tick economics.
         </p>
 
         <section className="panel">
@@ -90,8 +98,15 @@ export function App() {
             <span>{stats.totalTrades} trades</span>
           </div>
           <div className="stat-grid">
-            <StatCard label="Net PnL" value={formatCurrency(stats.netPnl)} accent="good" />
-            <StatCard label="Average Trade" value={formatCurrency(stats.averagePnl)} />
+            <StatCard
+              label="Net PnL"
+              value={formatCurrency(stats.netPnl)}
+              accent="good"
+            />
+            <StatCard
+              label="Average Trade"
+              value={formatCurrency(stats.averagePnl)}
+            />
             <StatCard label="Win Rate" value={formatPercent(stats.winRate)} />
             <StatCard label="Best Setup" value={stats.bestSetup} />
           </div>
@@ -111,13 +126,18 @@ export function App() {
             >
               Step back
             </button>
-            <button className="button button-strong" onClick={() => setIsPlaying((value) => !value)}>
+            <button
+              className="button button-strong"
+              onClick={() => setIsPlaying((value) => !value)}
+            >
               {isPlaying ? "Pause" : "Play"}
             </button>
             <button
               className="button"
               onClick={() =>
-                setCursor((current) => Math.min(sampleJournalDay.bars.length - 1, current + 1))
+                setCursor((current) =>
+                  Math.min(sampleJournalDay.bars.length - 1, current + 1),
+                )
               }
             >
               Step forward
@@ -145,7 +165,11 @@ export function App() {
               ))}
             </div>
             <div className="bar-readout">
-              <span>{new Date(activeBar.time).toLocaleTimeString("en-US", { timeStyle: "short" })}</span>
+              <span>
+                {new Date(activeBar.time).toLocaleTimeString("en-US", {
+                  timeStyle: "short",
+                })}
+              </span>
               <span>Close {activeBar.close.toFixed(2)}</span>
               <span>Vol {activeBar.volume}</span>
             </div>
@@ -160,9 +184,14 @@ export function App() {
 
               return (
                 <div key={bar.time} className="candle-slot">
-                  <div className="wick" style={{ top: `${high}%`, height: `${low - high}%` }} />
                   <div
-                    className={bullish ? "candle candle-up" : "candle candle-down"}
+                    className="wick"
+                    style={{ top: `${high}%`, height: `${low - high}%` }}
+                  />
+                  <div
+                    className={
+                      bullish ? "candle candle-up" : "candle candle-down"
+                    }
                     style={{
                       top: `${Math.min(open, close)}%`,
                       height: `${Math.max(8, Math.abs(close - open))}%`,
@@ -178,11 +207,16 @@ export function App() {
           <section className="panel">
             <div className="panel-header">
               <h2>Trade log</h2>
-              <span>{stats.winners}W / {stats.losers}L</span>
+              <span>
+                {stats.winners}W / {stats.losers}L
+              </span>
             </div>
             <div className="trade-list">
               {sampleJournalDay.trades.map((trade) => {
-                const pnl = calculateTradePnl(trade, sampleJournalDay.instrument);
+                const pnl = calculateTradePnl(
+                  trade,
+                  sampleJournalDay.instrument,
+                );
                 const ticks = calculateTicks(
                   trade.entryPrice,
                   trade.exitPrice,
@@ -193,17 +227,26 @@ export function App() {
                 return (
                   <button
                     key={trade.id}
-                    className={trade.id === selectedTrade.id ? "trade-card trade-card-active" : "trade-card"}
+                    className={
+                      trade.id === selectedTrade.id
+                        ? "trade-card trade-card-active"
+                        : "trade-card"
+                    }
                     onClick={() => setSelectedTradeId(trade.id)}
                   >
                     <div className="trade-card-top">
                       <strong>{trade.setup}</strong>
-                      <span className={pnl >= 0 ? "pill pill-good" : "pill pill-bad"}>
+                      <span
+                        className={
+                          pnl >= 0 ? "pill pill-good" : "pill pill-bad"
+                        }
+                      >
                         {formatCurrency(pnl)}
                       </span>
                     </div>
                     <p>
-                      {trade.side.toUpperCase()} {trade.contracts} contracts, {ticks.toFixed(0)} ticks
+                      {trade.side.toUpperCase()} {trade.contracts} contracts,{" "}
+                      {ticks.toFixed(0)} ticks
                     </p>
                     <p className="muted">{trade.notes}</p>
                   </button>
@@ -218,12 +261,32 @@ export function App() {
               <span>{selectedTrade.tags.join(" · ")}</span>
             </div>
             <div className="review-stack">
-              <ReviewRow label="Entry" value={selectedTrade.entryPrice.toFixed(2)} />
-              <ReviewRow label="Exit" value={selectedTrade.exitPrice.toFixed(2)} />
-              <ReviewRow label="Confidence" value={formatPercent(selectedTrade.confidence)} />
-              <ReviewRow label="Rule adherence" value={formatPercent(selectedTrade.ruleAdherence)} />
-              <ReviewRow label="Session note" value={sampleJournalDay.notes} multiline />
-              <ReviewRow label="Trade note" value={selectedTrade.notes} multiline />
+              <ReviewRow
+                label="Entry"
+                value={selectedTrade.entryPrice.toFixed(2)}
+              />
+              <ReviewRow
+                label="Exit"
+                value={selectedTrade.exitPrice.toFixed(2)}
+              />
+              <ReviewRow
+                label="Confidence"
+                value={formatPercent(selectedTrade.confidence)}
+              />
+              <ReviewRow
+                label="Rule adherence"
+                value={formatPercent(selectedTrade.ruleAdherence)}
+              />
+              <ReviewRow
+                label="Session note"
+                value={sampleJournalDay.notes}
+                multiline
+              />
+              <ReviewRow
+                label="Trade note"
+                value={selectedTrade.notes}
+                multiline
+              />
             </div>
           </section>
         </section>
@@ -242,7 +305,9 @@ function StatCard({
   accent?: "good";
 }) {
   return (
-    <article className={accent === "good" ? "stat-card stat-card-good" : "stat-card"}>
+    <article
+      className={accent === "good" ? "stat-card stat-card-good" : "stat-card"}
+    >
       <span>{label}</span>
       <strong>{value}</strong>
     </article>
@@ -259,7 +324,9 @@ function ReviewRow({
   multiline?: boolean;
 }) {
   return (
-    <div className={multiline ? "review-row review-row-multiline" : "review-row"}>
+    <div
+      className={multiline ? "review-row review-row-multiline" : "review-row"}
+    >
       <span>{label}</span>
       <strong>{value}</strong>
     </div>

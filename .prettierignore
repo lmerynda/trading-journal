@@ -2,11 +2,7 @@
 coverage
 dist
 node_modules
-pnpm-lock.yaml
+package-lock.json
 *.tsbuildinfo
 docs/research/marketdataapp.md
 scripts/marketdataapp/explore-option.mjs
-src/App.tsx
-src/lib/sampleData.ts
-src/lib/stats.ts
-src/styles.css
