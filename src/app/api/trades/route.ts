@@ -1,4 +1,5 @@
 import { getTradeCatalog } from "@/backend/composition/trades";
+import { requireAdminMutation } from "@/lib/admin-session";
 import { createTradeInput } from "./validation";
 
 export const dynamic = "force-dynamic";
@@ -11,6 +12,9 @@ export async function GET(): Promise<Response> {
 }
 
 export async function POST(request: Request): Promise<Response> {
+  const unauthorized = requireAdminMutation(request);
+  if (unauthorized) return unauthorized;
+
   const input = createTradeInput.safeParse(await request.json());
   if (!input.success) {
     return Response.json({ error: "Invalid trade." }, { status: 400 });

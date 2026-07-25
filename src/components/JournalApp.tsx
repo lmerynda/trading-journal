@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   type ChangeEvent,
   type ClipboardEvent as ReactClipboardEvent,
@@ -252,13 +253,21 @@ export function JournalApp() {
             <p className="eyebrow">Review library</p>
             <h1>Trades</h1>
           </div>
-          <button
-            className="new-trade-button"
-            type="button"
-            onClick={() => void handleCreate()}
-          >
-            <span aria-hidden="true">+</span> New trade
-          </button>
+          <div className="admin-sidebar-actions">
+            <Link href="/" title="Open public library">
+              Public site
+            </Link>
+            <form action="/api/auth/logout" method="post">
+              <button type="submit">Log out</button>
+            </form>
+            <button
+              className="new-trade-button"
+              type="button"
+              onClick={() => void handleCreate()}
+            >
+              <span aria-hidden="true">+</span> New trade
+            </button>
+          </div>
         </header>
 
         <nav className="trade-list" aria-label="Trade reviews">

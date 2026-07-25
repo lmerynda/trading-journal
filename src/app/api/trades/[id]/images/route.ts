@@ -2,6 +2,7 @@ import {
   getObjectStorage,
   getTradeCatalog,
 } from "@/backend/composition/trades";
+import { requireAdminMutation } from "@/lib/admin-session";
 import { imageRole, tradeId } from "../../validation";
 
 const maximumImageSize = 20 * 1024 * 1024;
@@ -14,6 +15,9 @@ export async function POST(
   request: Request,
   context: RouteContext,
 ): Promise<Response> {
+  const unauthorized = requireAdminMutation(request);
+  if (unauthorized) return unauthorized;
+
   const id = tradeId.safeParse((await context.params).id);
   if (!id.success || !(await getTradeCatalog().get(id.data))) {
     return new Response(null, { status: 404 });
