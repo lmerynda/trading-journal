@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: trading_journal
+          POSTGRES_USER: trading_journal
+          POSTGRES_PASSWORD: trading_journal
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U trading_journal -d trading_journal"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 20
+
+    env:
+      DATABASE_URL: postgres://trading_journal:trading_journal@localhost:5432/trading_journal
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm format:check
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm check:boundaries
+      - run: pnpm test
+      - run: pnpm db:migrate
+      - run: pnpm build

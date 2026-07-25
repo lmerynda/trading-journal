@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useMemo, useState } from "react";
 import { sampleJournalDay } from "./lib/sampleData";
 import { buildJournalStats } from "./lib/stats";

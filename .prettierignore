@@ -1,0 +1,12 @@
+.next
+coverage
+dist
+node_modules
+pnpm-lock.yaml
+*.tsbuildinfo
+docs/research/marketdataapp.md
+scripts/marketdataapp/explore-option.mjs
+src/App.tsx
+src/lib/sampleData.ts
+src/lib/stats.ts
+src/styles.css
