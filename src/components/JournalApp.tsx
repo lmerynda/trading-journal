@@ -7,6 +7,7 @@ import {
   type DragEvent,
   type KeyboardEvent,
   type ReactNode,
+  type RefObject,
   useEffect,
   useRef,
   useState,
@@ -235,6 +236,89 @@ export function JournalApp() {
     if (images.length > 0) void addImages(images, role);
   }
 
+  function renderChart(
+    role: TradeImageRole,
+    number: string,
+    title: string,
+    input: RefObject<HTMLInputElement | null>,
+  ): ReactNode {
+    if (!selectedTrade) return null;
+
+    return (
+      <div className="chart-group">
+        <div className="chart-group-heading">
+          <span>{number}</span>
+          <h3>{title}</h3>
+          <button
+            className="upload-button"
+            type="button"
+            disabled={uploadingRole !== null}
+            onClick={() => input.current?.click()}
+          >
+            <span aria-hidden="true">+</span>{" "}
+            {uploadingRole === role ? "Uploading..." : "Add chart"}
+          </button>
+          <input
+            ref={input}
+            className="visually-hidden"
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={(event) => handleFiles(event, role)}
+          />
+        </div>
+
+        <div className="screenshots">
+          {selectedTrade.images
+            .filter((image) => image.role === role)
+            .map((image) => (
+              <Screenshot
+                image={image}
+                key={image.id}
+                onRemove={async () => {
+                  try {
+                    await removeTradeImage(selectedTrade.id, image.id);
+                    setTrades((current) =>
+                      current.map((trade) =>
+                        trade.id === selectedTrade.id
+                          ? {
+                              ...trade,
+                              images: trade.images.filter(
+                                (candidate) => candidate.id !== image.id,
+                              ),
+                            }
+                          : trade,
+                      ),
+                    );
+                  } catch {
+                    setErrorMessage("The screenshot could not be removed.");
+                  }
+                }}
+              />
+            ))}
+        </div>
+
+        <div
+          className={`drop-zone ${draggingRole === role ? "is-dragging" : ""}`}
+          tabIndex={0}
+          onPaste={(event) => handlePaste(event, role)}
+          onDragEnter={(event) => {
+            event.preventDefault();
+            setDraggingRole(role);
+          }}
+          onDragOver={(event) => event.preventDefault()}
+          onDragLeave={() => setDraggingRole(null)}
+          onDrop={(event) => handleDrop(event, role)}
+        >
+          <span className="drop-icon" aria-hidden="true">
+            +
+          </span>
+          <strong>Drop or paste chart</strong>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <main className="library-shell">
       {errorMessage && (
@@ -408,112 +492,58 @@ export function JournalApp() {
             <section className="document-section">
               <div className="section-heading">
                 <div>
-                  <p className="eyebrow">Primary review</p>
-                  <h2>Charts</h2>
+                  <p className="eyebrow">Primary evidence</p>
+                  <h2>Entry chart</h2>
                 </div>
               </div>
+              {renderChart("entry", "01", "When taking entry", entryFileInput)}
+            </section>
 
-              {(
-                [
-                  {
-                    role: "entry" as const,
-                    number: "01",
-                    title: "When taking entry",
-                    input: entryFileInput,
-                  },
-                  {
-                    role: "exits" as const,
-                    number: "02",
-                    title: "After taking all exits",
-                    input: exitsFileInput,
-                  },
-                ] satisfies Array<{
-                  role: TradeImageRole;
-                  number: string;
-                  title: string;
-                  input: React.RefObject<HTMLInputElement | null>;
-                }>
-              ).map((chart) => (
-                <div className="chart-group" key={chart.role}>
-                  <div className="chart-group-heading">
-                    <span>{chart.number}</span>
-                    <h3>{chart.title}</h3>
-                    <button
-                      className="upload-button"
-                      type="button"
-                      disabled={uploadingRole !== null}
-                      onClick={() => chart.input.current?.click()}
-                    >
-                      <span aria-hidden="true">+</span>{" "}
-                      {uploadingRole === chart.role
-                        ? "Uploading..."
-                        : "Add chart"}
-                    </button>
-                    <input
-                      ref={chart.input}
-                      className="visually-hidden"
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      onChange={(event) => handleFiles(event, chart.role)}
-                    />
-                  </div>
+            <section className="document-section notes-section">
+              <p className="eyebrow">Before and during</p>
+              <h2>Initial notes</h2>
+              <textarea
+                aria-label="Initial notes"
+                placeholder="Capture the idea, entry context, invalidation, or plan..."
+                value={selectedTrade.initialNotes}
+                onChange={(event) =>
+                  updateTrade((trade) => ({
+                    ...trade,
+                    initialNotes: event.target.value,
+                  }))
+                }
+              />
+            </section>
 
-                  <div className="screenshots">
-                    {selectedTrade.images
-                      .filter((image) => image.role === chart.role)
-                      .map((image) => (
-                        <Screenshot
-                          image={image}
-                          key={image.id}
-                          onRemove={async () => {
-                            try {
-                              await removeTradeImage(
-                                selectedTrade.id,
-                                image.id,
-                              );
-                              setTrades((current) =>
-                                current.map((trade) =>
-                                  trade.id === selectedTrade.id
-                                    ? {
-                                        ...trade,
-                                        images: trade.images.filter(
-                                          (candidate) =>
-                                            candidate.id !== image.id,
-                                        ),
-                                      }
-                                    : trade,
-                                ),
-                              );
-                            } catch {
-                              setErrorMessage(
-                                "The screenshot could not be removed.",
-                              );
-                            }
-                          }}
-                        />
-                      ))}
-                  </div>
-
-                  <div
-                    className={`drop-zone ${draggingRole === chart.role ? "is-dragging" : ""}`}
-                    tabIndex={0}
-                    onPaste={(event) => handlePaste(event, chart.role)}
-                    onDragEnter={(event) => {
-                      event.preventDefault();
-                      setDraggingRole(chart.role);
-                    }}
-                    onDragOver={(event) => event.preventDefault()}
-                    onDragLeave={() => setDraggingRole(null)}
-                    onDrop={(event) => handleDrop(event, chart.role)}
-                  >
-                    <span className="drop-icon" aria-hidden="true">
-                      +
-                    </span>
-                    <strong>Drop or paste chart</strong>
-                  </div>
+            <section className="document-section">
+              <div className="section-heading">
+                <div>
+                  <p className="eyebrow">Outcome evidence</p>
+                  <h2>Exit chart</h2>
                 </div>
-              ))}
+              </div>
+              {renderChart(
+                "exits",
+                "02",
+                "After taking all exits",
+                exitsFileInput,
+              )}
+            </section>
+
+            <section className="document-section notes-section">
+              <p className="eyebrow">After the trade</p>
+              <h2>Final notes</h2>
+              <textarea
+                aria-label="Final notes"
+                placeholder="Capture execution, outcome, lessons, or anything worth remembering..."
+                value={selectedTrade.finalNotes}
+                onChange={(event) =>
+                  updateTrade((trade) => ({
+                    ...trade,
+                    finalNotes: event.target.value,
+                  }))
+                }
+              />
             </section>
 
             <section className="document-section video-section">
@@ -541,22 +571,6 @@ export function JournalApp() {
                   />
                 </div>
               )}
-            </section>
-
-            <section className="document-section notes-section">
-              <p className="eyebrow">Secondary notes</p>
-              <h2>Notes</h2>
-              <textarea
-                aria-label="Trade notes"
-                placeholder="Add context, lessons, or anything that is not already on the charts..."
-                value={selectedTrade.notes}
-                onChange={(event) =>
-                  updateTrade((trade) => ({
-                    ...trade,
-                    notes: event.target.value,
-                  }))
-                }
-              />
             </section>
           </div>
         ) : (

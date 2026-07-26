@@ -14,7 +14,8 @@ export interface TradeReviewRecord {
   title: string;
   date: string;
   direction: TradeDirection;
-  notes: string;
+  initialNotes: string;
+  finalNotes: string;
   youtubeUrl: string | null;
   tags: string[];
   images: TradeImageRecord[];
@@ -32,7 +33,8 @@ export interface UpdateTradeInput {
   title: string;
   date: string;
   direction: TradeDirection;
-  notes: string;
+  initialNotes: string;
+  finalNotes: string;
   youtubeUrl: string | null;
   tags: string[];
 }

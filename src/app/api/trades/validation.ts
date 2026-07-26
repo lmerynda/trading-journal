@@ -2,6 +2,7 @@ import { z } from "zod";
 
 const direction = z.enum(["long", "short"]);
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+const notes = z.string().max(50_000);
 export const imageRole = z.enum(["entry", "exits"]);
 
 export const tradeId = z.uuid();
@@ -16,7 +17,8 @@ export const updateTradeInput = z.object({
   title: z.string().max(200),
   date,
   direction,
-  notes: z.string().max(50_000),
+  initialNotes: notes,
+  finalNotes: notes,
   youtubeUrl: z
     .union([
       z.url().refine((value) => {

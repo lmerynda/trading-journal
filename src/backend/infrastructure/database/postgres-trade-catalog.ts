@@ -17,7 +17,8 @@ interface TradeRow {
   title: string;
   date: Date;
   direction: "long" | "short";
-  notes: string;
+  initialNotes: string;
+  finalNotes: string;
   youtubeUrl: string | null;
   tags: string[];
   images: TradeImageRecord[];
@@ -40,7 +41,8 @@ const tradeSelection = `
     trade.title,
     trade.trade_date as "date",
     trade.direction,
-    trade.notes,
+    trade.initial_notes as "initialNotes",
+    trade.final_notes as "finalNotes",
     trade.youtube_url as "youtubeUrl",
     trade.created_at as "createdAt",
     trade.updated_at as "updatedAt",
@@ -87,7 +89,7 @@ export class PostgresTradeCatalog implements TradeCatalogPort {
     if (filter.text) {
       const search = parameter(`%${filter.text}%`);
       conditions.push(
-        `(trade.title ilike ${search} or trade.notes ilike ${search})`,
+        `(trade.title ilike ${search} or trade.final_notes ilike ${search})`,
       );
     }
 
@@ -145,7 +147,8 @@ export class PostgresTradeCatalog implements TradeCatalogPort {
         set title = ${input.title},
             trade_date = ${input.date},
             direction = ${input.direction},
-            notes = ${input.notes},
+            initial_notes = ${input.initialNotes},
+            final_notes = ${input.finalNotes},
             youtube_url = ${input.youtubeUrl},
             updated_at = now()
         where id = ${id}

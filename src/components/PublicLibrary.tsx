@@ -2,6 +2,9 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import ReactMarkdown from "react-markdown";
+import remarkBreaks from "remark-breaks";
+import remarkGfm from "remark-gfm";
 import {
   startTransition,
   useEffect,
@@ -32,6 +35,69 @@ function formatDate(value: string): string {
 
 function hrefFor(pathname: string, query: string): string {
   return query ? `${pathname}?q=${encodeURIComponent(query)}` : pathname;
+}
+
+function MarkdownNotes({
+  eyebrow,
+  title,
+  notes,
+}: {
+  eyebrow: string;
+  title: string;
+  notes: string;
+}) {
+  if (!notes.trim()) return null;
+
+  return (
+    <section className="public-document-section public-notes">
+      <p className="eyebrow">{eyebrow}</p>
+      <h2>{title}</h2>
+      <div className="markdown-content">
+        <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
+          {notes}
+        </ReactMarkdown>
+      </div>
+    </section>
+  );
+}
+
+function PublicChart({
+  trade,
+  role,
+}: {
+  trade: TradeReviewRecord;
+  role: "entry" | "exits";
+}) {
+  const images = trade.images.filter((image) => image.role === role);
+  if (images.length === 0) return null;
+
+  return (
+    <section className="public-document-section">
+      <p className="eyebrow">
+        {role === "entry" ? "Entry context" : "Outcome"}
+      </p>
+      <h2>
+        {role === "entry" ? "When taking entry" : "After taking all exits"}
+      </h2>
+      <div className="public-screenshots">
+        {images.map((image) => (
+          <figure key={image.id}>
+            <a
+              href={`/api/images/${image.id}`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`/api/images/${image.id}`}
+                alt={`${role} chart for ${trade.title}`}
+              />
+            </a>
+          </figure>
+        ))}
+      </div>
+    </section>
+  );
 }
 
 function youtubeEmbedUrl(value: string | null): string | null {
@@ -468,39 +534,21 @@ function PublicTradeDocument({
         )}
       </header>
 
-      {(["entry", "exits"] as const).map((role) => {
-        const images = trade.images.filter((image) => image.role === role);
-        if (images.length === 0) return null;
-        return (
-          <section className="public-document-section" key={role}>
-            <p className="eyebrow">
-              {role === "entry" ? "Entry context" : "Outcome"}
-            </p>
-            <h2>
-              {role === "entry"
-                ? "When taking entry"
-                : "After taking all exits"}
-            </h2>
-            <div className="public-screenshots">
-              {images.map((image) => (
-                <figure key={image.id}>
-                  <a
-                    href={`/api/images/${image.id}`}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={`/api/images/${image.id}`}
-                      alt={`${role} chart for ${trade.title}`}
-                    />
-                  </a>
-                </figure>
-              ))}
-            </div>
-          </section>
-        );
-      })}
+      <PublicChart trade={trade} role="entry" />
+
+      <MarkdownNotes
+        eyebrow="Before and during"
+        title="Initial notes"
+        notes={trade.initialNotes}
+      />
+
+      <PublicChart trade={trade} role="exits" />
+
+      <MarkdownNotes
+        eyebrow="After the trade"
+        title="Final notes"
+        notes={trade.finalNotes}
+      />
 
       {videoUrl && (
         <section className="public-document-section">
@@ -509,14 +557,6 @@ function PublicTradeDocument({
           <div className="video-frame">
             <iframe src={videoUrl} title="Trade replay video" allowFullScreen />
           </div>
-        </section>
-      )}
-
-      {trade.notes && (
-        <section className="public-document-section public-notes">
-          <p className="eyebrow">Review notes</p>
-          <h2>Notes</h2>
-          <p>{trade.notes}</p>
         </section>
       )}
     </article>

@@ -1234,6 +1234,64 @@ figure {
   margin-bottom: 18px;
 }
 
+.markdown-content {
+  color: #343a36;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.04rem;
+  line-height: 1.72;
+}
+
+.markdown-content > :first-child {
+  margin-top: 0;
+}
+
+.markdown-content > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown-content a {
+  color: var(--accent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.markdown-content blockquote {
+  margin-left: 0;
+  padding-left: 18px;
+  border-left: 2px solid #aab1aa;
+  color: var(--muted);
+}
+
+.markdown-content code {
+  padding: 2px 4px;
+  border-radius: 3px;
+  background: #e7e9e5;
+  font-family: "Courier New", monospace;
+  font-size: 0.88em;
+}
+
+.markdown-content pre {
+  overflow-x: auto;
+  padding: 14px;
+  background: #e7e9e5;
+}
+
+.markdown-content pre code {
+  padding: 0;
+}
+
+.markdown-content table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.markdown-content th,
+.markdown-content td {
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  text-align: left;
+}
+
 .public-screenshots {
   display: flex;
   flex-direction: column;

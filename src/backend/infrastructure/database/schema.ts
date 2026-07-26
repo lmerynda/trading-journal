@@ -28,7 +28,8 @@ export const trades = pgTable(
     title: text("title").notNull(),
     tradeDate: date("trade_date").notNull(),
     direction: tradeDirection("direction").notNull(),
-    notes: text("notes").default("").notNull(),
+    initialNotes: text("initial_notes").default("").notNull(),
+    finalNotes: text("final_notes").default("").notNull(),
     youtubeUrl: text("youtube_url"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()

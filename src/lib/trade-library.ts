@@ -14,7 +14,8 @@ export interface TradeReview {
   title: string;
   date: string;
   direction: TradeDirection;
-  notes: string;
+  initialNotes: string;
+  finalNotes: string;
   youtubeUrl: string | null;
   tags: string[];
   images: TradeImage[];
@@ -55,7 +56,8 @@ export function saveTrade(trade: TradeReview): Promise<TradeReview> {
       title: trade.title,
       date: trade.date,
       direction: trade.direction,
-      notes: trade.notes,
+      initialNotes: trade.initialNotes,
+      finalNotes: trade.finalNotes,
       youtubeUrl: trade.youtubeUrl,
       tags: trade.tags,
     }),
