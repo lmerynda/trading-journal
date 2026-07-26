@@ -445,9 +445,12 @@ function PublicTradeDocument({
   const videoUrl = youtubeEmbedUrl(trade.youtubeUrl);
   return (
     <article className="public-trade-document">
-      <Link className="back-to-library" href={hrefFor("/", query)}>
-        ← Library home
-      </Link>
+      <div className="public-trade-actions">
+        <Link className="back-to-library" href={hrefFor("/", query)}>
+          ← Library home
+        </Link>
+        <ExportPdfButton trade={trade} />
+      </div>
       <header>
         <div className="public-trade-meta">
           <time dateTime={trade.date}>{formatDate(trade.date)}</time>
@@ -517,5 +520,53 @@ function PublicTradeDocument({
         </section>
       )}
     </article>
+  );
+}
+
+function ExportPdfButton({ trade }: { trade: TradeReviewRecord }) {
+  const [isPreparing, setIsPreparing] = useState(false);
+
+  async function exportPdf(): Promise<void> {
+    setIsPreparing(true);
+    const previousTitle = document.title;
+    const title = (trade.title || "Untitled trade")
+      .replaceAll(/[\\/:*?"<>|]/g, "-")
+      .trim();
+
+    try {
+      const images = Array.from(
+        document.querySelectorAll<HTMLImageElement>(
+          ".public-trade-document img",
+        ),
+      );
+      await Promise.all(
+        images.map(async (image) => {
+          if (!image.complete) {
+            await new Promise<void>((resolve) => {
+              image.addEventListener("load", () => resolve(), { once: true });
+              image.addEventListener("error", () => resolve(), { once: true });
+            });
+          }
+          await image.decode().catch(() => undefined);
+        }),
+      );
+
+      document.title = `${trade.date} - ${title}`;
+      window.print();
+    } finally {
+      document.title = previousTitle;
+      setIsPreparing(false);
+    }
+  }
+
+  return (
+    <button
+      className="export-pdf-button"
+      type="button"
+      disabled={isPreparing}
+      onClick={() => void exportPdf()}
+    >
+      {isPreparing ? "Preparing..." : "Export PDF"}
+    </button>
   );
 }
