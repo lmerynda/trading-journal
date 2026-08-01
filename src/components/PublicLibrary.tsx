@@ -268,8 +268,9 @@ function DiscoveryHome({
   const parsed = parseTradeSearchQuery(query);
   const selectedFrom = parsed.date ?? parsed.from;
   const selectedTo = parsed.date ?? parsed.to;
-  const initialDate = selectedFrom
-    ? new Date(`${selectedFrom}T12:00:00`)
+  const initialDateValue = selectedFrom ?? library.days.at(-1)?.date;
+  const initialDate = initialDateValue
+    ? new Date(`${initialDateValue}T12:00:00`)
     : new Date();
   const [visibleMonth, setVisibleMonth] = useState(
     new Date(initialDate.getFullYear(), initialDate.getMonth(), 1),
