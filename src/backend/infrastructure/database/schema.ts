@@ -9,6 +9,7 @@ import {
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
+import type { AnyPgColumn } from "drizzle-orm/pg-core";
 
 export const applicationMetadata = pgTable("application_metadata", {
   key: text("key").primaryKey(),
@@ -31,6 +32,8 @@ export const trades = pgTable(
     initialNotes: text("initial_notes").default("").notNull(),
     finalNotes: text("final_notes").default("").notNull(),
     youtubeUrl: text("youtube_url"),
+    likes: integer("likes").default(0).notNull(),
+    dislikes: integer("dislikes").default(0).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -77,4 +80,24 @@ export const tradeTags = pgTable(
       .references(() => tags.id, { onDelete: "cascade" }),
   },
   (table) => [primaryKey({ columns: [table.tradeId, table.tagId] })],
+);
+
+export const tradeComments = pgTable(
+  "trade_comments",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tradeId: uuid("trade_id")
+      .notNull()
+      .references(() => trades.id, { onDelete: "cascade" }),
+    parentId: uuid("parent_id").references(
+      (): AnyPgColumn => tradeComments.id,
+      { onDelete: "cascade" },
+    ),
+    authorName: text("author_name").notNull(),
+    body: text("body").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [index("trade_comments_trade_id_idx").on(table.tradeId)],
 );

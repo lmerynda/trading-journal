@@ -17,6 +17,11 @@ import type {
   PublicLibraryDto,
 } from "@/backend/application/trades/query-public-library";
 import type { TradeReviewRecord } from "@/backend/ports/trade-catalog";
+import type {
+  TradeCommentRecord,
+  TradeInteractionsRecord,
+  TradeReaction,
+} from "@/backend/ports/trade-interactions";
 import { groupTradesByDate } from "@/lib/group-trades-by-date";
 import {
   clearTradeSearchDates,
@@ -509,6 +514,60 @@ function PublicTradeDocument({
   query: string;
 }) {
   const videoUrl = youtubeEmbedUrl(trade.youtubeUrl);
+  const [interactions, setInteractions] = useState<TradeInteractionsRecord>();
+  const [interactionError, setInteractionError] = useState("");
+
+  useEffect(() => {
+    void fetch(`/api/trades/${trade.id}/interactions`, { cache: "no-store" })
+      .then((response) => {
+        if (!response.ok) throw new Error("Could not load interactions.");
+        return response.json() as Promise<TradeInteractionsRecord>;
+      })
+      .then(setInteractions)
+      .catch(() => setInteractionError("The discussion could not be loaded."));
+  }, [trade.id]);
+
+  async function react(value: TradeReaction): Promise<void> {
+    setInteractionError("");
+    try {
+      const response = await fetch(`/api/trades/${trade.id}/interactions`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ value }),
+      });
+      if (!response.ok) throw new Error("Could not save reaction.");
+      setInteractions((await response.json()) as TradeInteractionsRecord);
+    } catch {
+      setInteractionError("Your reaction could not be saved.");
+    }
+  }
+
+  async function addComment(
+    authorName: string,
+    body: string,
+    parentId: string | null,
+  ): Promise<boolean> {
+    setInteractionError("");
+    try {
+      const response = await fetch(`/api/trades/${trade.id}/interactions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ authorName, body, parentId }),
+      });
+      if (!response.ok) throw new Error("Could not post comment.");
+      const comment = (await response.json()) as TradeCommentRecord;
+      setInteractions((current) =>
+        current
+          ? { ...current, comments: [...current.comments, comment] }
+          : current,
+      );
+      return true;
+    } catch {
+      setInteractionError("Your comment could not be posted.");
+      return false;
+    }
+  }
+
   return (
     <article className="public-trade-document">
       <div className="public-trade-actions">
@@ -525,13 +584,29 @@ function PublicTradeDocument({
           </span>
         </div>
         <h1>{trade.title || "Untitled trade"}</h1>
-        {trade.tags.length > 0 && (
-          <div className="public-trade-tags">
-            {trade.tags.map((tag) => (
-              <span key={tag}>#{tag}</span>
-            ))}
+        <div className="public-header-footer">
+          {trade.tags.length > 0 && (
+            <div className="public-trade-tags">
+              {trade.tags.map((tag) => (
+                <span key={tag}>#{tag}</span>
+              ))}
+            </div>
+          )}
+          <div className="trade-reactions" aria-label="Trade reactions">
+            <button type="button" onClick={() => void react(1)} title="Like">
+              <span aria-hidden="true">👍</span>
+              <strong>{interactions?.likes ?? 0}</strong>
+            </button>
+            <button
+              type="button"
+              onClick={() => void react(-1)}
+              title="Dislike"
+            >
+              <span aria-hidden="true">👎</span>
+              <strong>{interactions?.dislikes ?? 0}</strong>
+            </button>
           </div>
-        )}
+        </div>
       </header>
 
       <PublicChart trade={trade} role="entry" />
@@ -559,7 +634,238 @@ function PublicTradeDocument({
           </div>
         </section>
       )}
+
+      <TradeDiscussion
+        comments={interactions?.comments ?? []}
+        isLoading={!interactions && !interactionError}
+        error={interactionError}
+        onSubmit={addComment}
+      />
     </article>
+  );
+}
+
+function TradeDiscussion({
+  comments,
+  isLoading,
+  error,
+  onSubmit,
+}: {
+  comments: TradeCommentRecord[];
+  isLoading: boolean;
+  error: string;
+  onSubmit: (
+    authorName: string,
+    body: string,
+    parentId: string | null,
+  ) => Promise<boolean>;
+}) {
+  const roots = comments.filter((comment) => comment.parentId === null);
+
+  return (
+    <section className="trade-discussion public-document-section">
+      <p className="eyebrow">Discussion</p>
+      <h2>
+        Comments <span>{comments.length}</span>
+      </h2>
+      <CommentComposer parentId={null} onSubmit={onSubmit} />
+      {error && (
+        <p className="interaction-error" role="alert">
+          {error}
+        </p>
+      )}
+      {isLoading && <p className="comments-status">Loading comments...</p>}
+      {!isLoading && roots.length === 0 && (
+        <p className="comments-status">
+          No comments yet. Start the discussion.
+        </p>
+      )}
+      <div className="comment-thread">
+        {roots.map((comment) => (
+          <CommentItem
+            key={comment.id}
+            comment={comment}
+            comments={comments}
+            onSubmit={onSubmit}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function CommentItem({
+  comment,
+  comments,
+  onSubmit,
+}: {
+  comment: TradeCommentRecord;
+  comments: TradeCommentRecord[];
+  onSubmit: (
+    authorName: string,
+    body: string,
+    parentId: string | null,
+  ) => Promise<boolean>;
+}) {
+  const [isReplying, setIsReplying] = useState(false);
+  const replies = comments.filter(
+    (candidate) => candidate.parentId === comment.id,
+  );
+
+  return (
+    <article className="comment-item">
+      <header>
+        <strong>{comment.authorName}</strong>
+        <time dateTime={comment.createdAt}>
+          {new Intl.DateTimeFormat("en", {
+            month: "short",
+            day: "numeric",
+            hour: "numeric",
+            minute: "2-digit",
+          }).format(new Date(comment.createdAt))}
+        </time>
+      </header>
+      <div
+        className="comment-body"
+        dangerouslySetInnerHTML={{ __html: comment.body }}
+      />
+      <button
+        className="comment-reply-button"
+        type="button"
+        onClick={() => setIsReplying((current) => !current)}
+      >
+        {isReplying ? "Cancel" : "Reply"}
+      </button>
+      {isReplying && (
+        <CommentComposer
+          parentId={comment.id}
+          compact
+          onSubmit={async (...input) => {
+            const posted = await onSubmit(...input);
+            if (posted) setIsReplying(false);
+            return posted;
+          }}
+        />
+      )}
+      {replies.length > 0 && (
+        <div className="comment-replies">
+          {replies.map((reply) => (
+            <CommentItem
+              key={reply.id}
+              comment={reply}
+              comments={comments}
+              onSubmit={onSubmit}
+            />
+          ))}
+        </div>
+      )}
+    </article>
+  );
+}
+
+function CommentComposer({
+  parentId,
+  compact = false,
+  onSubmit,
+}: {
+  parentId: string | null;
+  compact?: boolean;
+  onSubmit: (
+    authorName: string,
+    body: string,
+    parentId: string | null,
+  ) => Promise<boolean>;
+}) {
+  const editor = useRef<HTMLDivElement>(null);
+  const [authorName, setAuthorName] = useState("");
+  const [hasContent, setHasContent] = useState(false);
+  const [isPosting, setIsPosting] = useState(false);
+
+  function format(command: string, value?: string): void {
+    editor.current?.focus();
+    document.execCommand(command, false, value);
+  }
+
+  async function submit(): Promise<void> {
+    if (!editor.current || !authorName.trim() || !hasContent) return;
+    setIsPosting(true);
+    const posted = await onSubmit(
+      authorName,
+      editor.current.innerHTML,
+      parentId,
+    );
+    setIsPosting(false);
+    if (posted) {
+      editor.current.innerHTML = "";
+      setHasContent(false);
+    }
+  }
+
+  return (
+    <div className={`comment-composer ${compact ? "is-compact" : ""}`}>
+      <input
+        aria-label="Display name"
+        maxLength={60}
+        placeholder="Your name"
+        value={authorName}
+        onChange={(event) => setAuthorName(event.target.value)}
+      />
+      <div className="comment-editor-shell">
+        <div className="comment-toolbar" aria-label="Comment formatting">
+          <button type="button" title="Bold" onClick={() => format("bold")}>
+            <strong>B</strong>
+          </button>
+          <button type="button" title="Italic" onClick={() => format("italic")}>
+            <em>I</em>
+          </button>
+          <button
+            type="button"
+            title="Bulleted list"
+            onClick={() => format("insertUnorderedList")}
+          >
+            •
+          </button>
+          <button
+            type="button"
+            title="Numbered list"
+            onClick={() => format("insertOrderedList")}
+          >
+            1.
+          </button>
+          <button
+            type="button"
+            title="Add link"
+            onClick={() => {
+              const url = window.prompt("Link URL");
+              if (url) format("createLink", url);
+            }}
+          >
+            ↗
+          </button>
+        </div>
+        <div
+          ref={editor}
+          className="comment-editor"
+          contentEditable
+          role="textbox"
+          aria-multiline="true"
+          data-placeholder={
+            compact ? "Write a reply..." : "Add to the discussion..."
+          }
+          onInput={(event) =>
+            setHasContent(Boolean(event.currentTarget.textContent?.trim()))
+          }
+        />
+      </div>
+      <button
+        className="comment-submit"
+        type="button"
+        disabled={!authorName.trim() || !hasContent || isPosting}
+        onClick={() => void submit()}
+      >
+        {isPosting ? "Posting..." : compact ? "Post reply" : "Post comment"}
+      </button>
+    </div>
   );
 }
 
