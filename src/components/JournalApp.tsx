@@ -453,6 +453,15 @@ export function JournalApp() {
               <div className="property property-tags">
                 <FieldLabel>Tags</FieldLabel>
                 <div className="tag-editor">
+                  <input
+                    aria-label="Add tag"
+                    placeholder="Add a tag"
+                    list="existing-tags"
+                    value={tagDraft}
+                    onChange={(event) => setTagDraft(event.target.value)}
+                    onKeyDown={handleTagKeyDown}
+                    onBlur={addTag}
+                  />
                   {selectedTrade.tags.map((tag) => (
                     <button
                       className="tag"
@@ -471,15 +480,6 @@ export function JournalApp() {
                       #{tag} <span aria-hidden="true">×</span>
                     </button>
                   ))}
-                  <input
-                    aria-label="Add tag"
-                    placeholder="Add a tag"
-                    list="existing-tags"
-                    value={tagDraft}
-                    onChange={(event) => setTagDraft(event.target.value)}
-                    onKeyDown={handleTagKeyDown}
-                    onBlur={addTag}
-                  />
                   <datalist id="existing-tags">
                     {existingTags.map((tag) => (
                       <option value={tag} key={tag} />
