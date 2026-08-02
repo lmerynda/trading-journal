@@ -175,7 +175,7 @@ export function PublicLibrary({
             <input
               id="trade-query"
               value={queryDraft}
-              placeholder="tag:breakout date:2026-07-25"
+              placeholder="Pullback or tag:breakout"
               onChange={(event) => setQueryDraft(event.target.value)}
             />
             {queryDraft && (

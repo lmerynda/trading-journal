@@ -89,7 +89,15 @@ export class PostgresTradeCatalog implements TradeCatalogPort {
     if (filter.text) {
       const search = parameter(`%${filter.text}%`);
       conditions.push(
-        `(trade.title ilike ${search} or trade.final_notes ilike ${search})`,
+        `(trade.title ilike ${search}
+          or trade.final_notes ilike ${search}
+          or exists (
+            select 1
+            from trade_tags searched_trade_tag
+            join tags searched_tag on searched_tag.id = searched_trade_tag.tag_id
+            where searched_trade_tag.trade_id = trade.id
+              and searched_tag.name ilike ${search}
+          ))`,
       );
     }
 
