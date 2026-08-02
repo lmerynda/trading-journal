@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
@@ -135,6 +135,7 @@ export function PublicLibrary({
   selectedTrade,
 }: PublicLibraryProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [queryDraft, setQueryDraft] = useState(query);
   const parsed = parseTradeSearchQuery(query);
   const tradeGroups = groupTradesByDate(library.trades);
@@ -142,14 +143,14 @@ export function PublicLibrary({
   useEffect(() => {
     if (queryDraft === query) return;
     const timer = window.setTimeout(() => {
-      startTransition(() => router.push(hrefFor("/", queryDraft.trim())));
+      startTransition(() => router.push(hrefFor(pathname, queryDraft.trim())));
     }, 350);
     return () => window.clearTimeout(timer);
-  }, [query, queryDraft, router]);
+  }, [pathname, query, queryDraft, router]);
 
   function applyQuery(nextQuery: string): void {
     setQueryDraft(nextQuery);
-    startTransition(() => router.push(hrefFor("/", nextQuery)));
+    startTransition(() => router.push(hrefFor(pathname, nextQuery)));
   }
 
   return (
