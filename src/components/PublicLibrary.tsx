@@ -395,7 +395,7 @@ function FeatureIdeas() {
         </div>
       </div>
       <CommentComposer
-        className="feature-idea-composer"
+        className="stacked-message-composer"
         parentId={null}
         placeholder="What would make this journal better?"
         submitLabel="Share idea"
@@ -787,7 +787,11 @@ function TradeDiscussion({
       <h2>
         Comments <span>{comments.length}</span>
       </h2>
-      <CommentComposer parentId={null} onSubmit={onSubmit} />
+      <CommentComposer
+        className="stacked-message-composer"
+        parentId={null}
+        onSubmit={onSubmit}
+      />
       {error && (
         <p className="interaction-error" role="alert">
           {error}
@@ -857,6 +861,7 @@ function CommentItem({
       </button>
       {isReplying && (
         <CommentComposer
+          className="stacked-message-composer"
           parentId={comment.id}
           compact
           onSubmit={async (...input) => {

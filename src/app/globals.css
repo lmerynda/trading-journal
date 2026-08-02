@@ -1058,22 +1058,22 @@ figure {
   margin-top: 20px;
 }
 
-.feature-idea-composer {
+.stacked-message-composer {
   grid-template-columns: minmax(0, 1fr) auto;
 }
 
-.feature-idea-composer .comment-editor-shell {
+.stacked-message-composer .comment-editor-shell {
   grid-column: 1 / -1;
   grid-row: 1;
 }
 
-.feature-idea-composer > input {
+.stacked-message-composer > input {
   grid-column: 1;
   grid-row: 2;
   width: min(100%, 260px);
 }
 
-.feature-idea-composer .comment-submit {
+.stacked-message-composer .comment-submit {
   grid-column: 2;
   grid-row: 2;
   justify-self: end;
@@ -1781,13 +1781,13 @@ figure {
     grid-column: 2;
   }
 
-  .feature-idea-composer > input {
+  .stacked-message-composer > input {
     grid-column: 1;
     grid-row: 2;
     width: auto;
   }
 
-  .feature-idea-composer .comment-submit {
+  .stacked-message-composer .comment-submit {
     grid-column: 2;
     grid-row: 2;
   }
