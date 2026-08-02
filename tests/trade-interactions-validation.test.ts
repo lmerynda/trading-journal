@@ -3,6 +3,7 @@ import {
   commentInput,
   reactionInput,
 } from "../src/app/api/trades/[id]/interactions/validation";
+import { publicMessageInput } from "../src/lib/public-message-validation";
 
 const comment = {
   parentId: null,
@@ -28,6 +29,18 @@ describe("trade interaction validation", () => {
     expect(commentInput.safeParse({ ...comment, body: "<br>" }).success).toBe(
       false,
     );
+  });
+
+  it("sanitizes feature ideas and trims their display names", () => {
+    expect(
+      publicMessageInput.parse({
+        authorName: " Alex ",
+        body: '<p>Keyboard shortcuts</p><script>alert("no")</script>',
+      }),
+    ).toEqual({
+      authorName: "Alex",
+      body: "<p>Keyboard shortcuts</p>",
+    });
   });
 
   it("accepts only like and dislike reactions", () => {

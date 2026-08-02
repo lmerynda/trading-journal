@@ -101,3 +101,12 @@ export const tradeComments = pgTable(
   },
   (table) => [index("trade_comments_trade_id_idx").on(table.tradeId)],
 );
+
+export const featureIdeas = pgTable("feature_ideas", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  authorName: text("author_name").notNull(),
+  body: text("body").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});

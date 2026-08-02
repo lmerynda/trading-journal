@@ -16,6 +16,7 @@ import type {
   DayActivityDto,
   PublicLibraryDto,
 } from "@/backend/application/trades/query-public-library";
+import type { FeatureIdeaRecord } from "@/backend/ports/feature-ideas";
 import type { TradeReviewRecord } from "@/backend/ports/trade-catalog";
 import type {
   TradeCommentRecord,
@@ -328,7 +329,123 @@ function DiscoveryHome({
         }
         onClearDates={() => onQueryChange(clearTradeSearchDates(query))}
       />
+
+      <FeatureIdeas />
     </div>
+  );
+}
+
+function FeatureIdeas() {
+  const [ideas, setIdeas] = useState<FeatureIdeaRecord[]>();
+  const [canManage, setCanManage] = useState(false);
+  const [completingId, setCompletingId] = useState<string>();
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    void fetch("/api/feature-ideas", { cache: "no-store" })
+      .then((response) => {
+        if (!response.ok) throw new Error("Could not load feature ideas.");
+        setCanManage(response.headers.get("X-Feature-Ideas-Manage") === "true");
+        return response.json() as Promise<FeatureIdeaRecord[]>;
+      })
+      .then(setIdeas)
+      .catch(() => setError("Feature ideas could not be loaded."));
+  }, []);
+
+  async function addIdea(authorName: string, body: string): Promise<boolean> {
+    setError("");
+    try {
+      const response = await fetch("/api/feature-ideas", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ authorName, body }),
+      });
+      if (!response.ok) throw new Error("Could not post feature idea.");
+      const idea = (await response.json()) as FeatureIdeaRecord;
+      setIdeas((current) => [idea, ...(current ?? [])]);
+      return true;
+    } catch {
+      setError("Your feature idea could not be posted.");
+      return false;
+    }
+  }
+
+  async function completeIdea(id: string): Promise<void> {
+    setError("");
+    setCompletingId(id);
+    try {
+      const response = await fetch(`/api/feature-ideas/${id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) throw new Error("Could not complete feature idea.");
+      setIdeas((current) => current?.filter((idea) => idea.id !== id));
+    } catch {
+      setError("The feature idea could not be marked done.");
+    } finally {
+      setCompletingId(undefined);
+    }
+  }
+
+  return (
+    <section className="feature-ideas" aria-labelledby="feature-ideas-heading">
+      <div className="filter-section-heading">
+        <div>
+          <p className="eyebrow">Community</p>
+          <h2 id="feature-ideas-heading">Feature ideas</h2>
+        </div>
+      </div>
+      <CommentComposer
+        className="feature-idea-composer"
+        parentId={null}
+        placeholder="What would make this journal better?"
+        submitLabel="Share idea"
+        onSubmit={(authorName, body) => addIdea(authorName, body)}
+      />
+      {error && (
+        <p className="interaction-error" role="alert">
+          {error}
+        </p>
+      )}
+      {!ideas && !error && (
+        <p className="comments-status">Loading feature ideas...</p>
+      )}
+      {ideas?.length === 0 && (
+        <p className="comments-status">No feature ideas yet.</p>
+      )}
+      <div className="feature-idea-list">
+        {ideas?.map((idea) => (
+          <article className="comment-item" key={idea.id}>
+            <header>
+              <span>
+                <strong>{idea.authorName}</strong>
+                <time dateTime={idea.createdAt}>
+                  {new Intl.DateTimeFormat("en", {
+                    month: "short",
+                    day: "numeric",
+                    hour: "numeric",
+                    minute: "2-digit",
+                  }).format(new Date(idea.createdAt))}
+                </time>
+              </span>
+              {canManage && (
+                <button
+                  className="feature-idea-complete"
+                  type="button"
+                  disabled={completingId === idea.id}
+                  onClick={() => void completeIdea(idea.id)}
+                >
+                  {completingId === idea.id ? "Marking done..." : "Mark done"}
+                </button>
+              )}
+            </header>
+            <div
+              className="comment-body"
+              dangerouslySetInnerHTML={{ __html: idea.body }}
+            />
+          </article>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -768,10 +885,16 @@ function CommentItem({
 function CommentComposer({
   parentId,
   compact = false,
+  className = "",
+  placeholder,
+  submitLabel,
   onSubmit,
 }: {
   parentId: string | null;
   compact?: boolean;
+  className?: string;
+  placeholder?: string;
+  submitLabel?: string;
   onSubmit: (
     authorName: string,
     body: string,
@@ -804,7 +927,9 @@ function CommentComposer({
   }
 
   return (
-    <div className={`comment-composer ${compact ? "is-compact" : ""}`}>
+    <div
+      className={`comment-composer ${compact ? "is-compact" : ""} ${className}`}
+    >
       <input
         aria-label="Display name"
         maxLength={60}
@@ -852,7 +977,8 @@ function CommentComposer({
           role="textbox"
           aria-multiline="true"
           data-placeholder={
-            compact ? "Write a reply..." : "Add to the discussion..."
+            placeholder ??
+            (compact ? "Write a reply..." : "Add to the discussion...")
           }
           onInput={(event) =>
             setHasContent(Boolean(event.currentTarget.textContent?.trim()))
@@ -865,7 +991,9 @@ function CommentComposer({
         disabled={!authorName.trim() || !hasContent || isPosting}
         onClick={() => void submit()}
       >
-        {isPosting ? "Posting..." : compact ? "Post reply" : "Post comment"}
+        {isPosting
+          ? "Posting..."
+          : (submitLabel ?? (compact ? "Post reply" : "Post comment"))}
       </button>
     </div>
   );

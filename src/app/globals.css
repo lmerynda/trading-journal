@@ -1049,6 +1049,59 @@ figure {
   font-size: 0.85rem;
 }
 
+.feature-ideas {
+  padding-top: 48px;
+  border-top: 1px solid var(--line);
+}
+
+.feature-idea-list {
+  margin-top: 20px;
+}
+
+.feature-idea-composer {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.feature-idea-composer .comment-editor-shell {
+  grid-column: 1 / -1;
+  grid-row: 1;
+}
+
+.feature-idea-composer > input {
+  grid-column: 1;
+  grid-row: 2;
+  width: min(100%, 260px);
+}
+
+.feature-idea-composer .comment-submit {
+  grid-column: 2;
+  grid-row: 2;
+  justify-self: end;
+}
+
+.feature-idea-list .comment-item > header {
+  justify-content: space-between;
+}
+
+.feature-idea-list .comment-item > header > span {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.feature-idea-complete {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.feature-idea-complete:hover {
+  color: var(--accent);
+}
+
 .calendar-section {
   border-bottom: 0;
 }
@@ -1726,6 +1779,17 @@ figure {
 
   .comment-submit {
     grid-column: 2;
+  }
+
+  .feature-idea-composer > input {
+    grid-column: 1;
+    grid-row: 2;
+    width: auto;
+  }
+
+  .feature-idea-composer .comment-submit {
+    grid-column: 2;
+    grid-row: 2;
   }
 
   .comment-replies {
