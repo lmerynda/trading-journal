@@ -163,7 +163,7 @@ export function JournalApp() {
   }
 
   function addTag(): void {
-    const tag = tagDraft.trim().replace(/^#/, "");
+    const tag = tagDraft.trim().replace(/^#/, "").toLowerCase();
     if (!tag || !selectedTrade || selectedTrade.tags.includes(tag)) {
       setTagDraft("");
       return;

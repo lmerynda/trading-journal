@@ -16,6 +16,15 @@ describe("trade update validation", () => {
     expect(updateTradeInput.parse(validReview)).toEqual(validReview);
   });
 
+  it("normalizes tags to lowercase", () => {
+    expect(
+      updateTradeInput.parse({
+        ...validReview,
+        tags: [" Breakout ", "OPENING RANGE"],
+      }).tags,
+    ).toEqual(["breakout", "opening range"]);
+  });
+
   it("limits each note field to 50,000 characters", () => {
     expect(
       updateTradeInput.safeParse({

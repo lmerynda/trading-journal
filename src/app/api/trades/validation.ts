@@ -29,5 +29,5 @@ export const updateTradeInput = z.object({
       z.null(),
     ])
     .transform((value) => value || null),
-  tags: z.array(z.string().trim().min(1).max(40)).max(20),
+  tags: z.array(z.string().trim().toLowerCase().min(1).max(40)).max(20),
 });
