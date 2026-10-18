@@ -144,3 +144,14 @@ If not, it probably does not belong in the core product.
 ## AI access principle
 
 No separate AI workflow is required. Shared daily-review and trade pages should use clear, semantic HTML, include the written review and full-resolution screenshots, and have stable URLs. The user can give those ordinary links to an external AI just as they would give them to another person.
+
+## Dependency compatibility
+
+Keep `next` and `eslint-config-next` on the same release. ESLint remains on the
+latest 9.x release because the current Next.js lint plugins do not all support
+ESLint 10 in their peer dependency ranges.
+
+The `esbuild` override keeps Drizzle's legacy TypeScript configuration loader on
+a patched release and satisfies Vite's optional peer range. After changing it,
+run `npm run check`, `npm run build`, and `npx drizzle-kit check` with a
+`DATABASE_URL` set; the consistency check does not connect to that database.
